@@ -1,4 +1,7 @@
 const Figure = require('../models/figure');
+const { ERROR_MESSAGES } = require('../config/constants');
+const NotFoundError = require('../utils/errors/NotFoundError');
+const UnauthorizedError = require('../utils/errors/unauthorizedError');
 
 const getFigures = (req, res, next) => {
     Figure.find({})
@@ -10,7 +13,10 @@ const deleteFigure = (req, res, next) => {
     Figure.findByIdAndDelete(req.params.id)
         .then((figure) => {
             if (!figure) {
-                return res.status(404).json({ message: 'Figure not found' });
+                throw new NotFoundError(ERROR_MESSAGES.FIGURE_NOT_FOUND);
+            }
+            if (figure.owner.toString() !== req.user._id) {
+                throw new UnauthorizedError(ERROR_MESSAGES.UNAUTHORIZED);
             }
             res.status(200).json({ message: 'Figure deleted successfully' });
         })

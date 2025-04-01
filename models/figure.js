@@ -44,7 +44,9 @@ const FigureSchema = new mongoose.Schema({
     },
     references: [{
        title: String,
-       url: String
+       author: String,
+       url: String,
+       publicationDate: Date,
     }],
     featuredQuote: {
         type: String,
@@ -52,10 +54,6 @@ const FigureSchema = new mongoose.Schema({
     tags: [{
         type: String,
     }],
-    createdAt: {
-        type: Date,
-        default: Date.now,
-    },
 });     
 
 module.exports = mongoose.model('Figure', FigureSchema);
