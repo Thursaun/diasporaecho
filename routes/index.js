@@ -6,13 +6,14 @@ const auth = require('../middlewares/auth');
 const {validateSignUp, validateSignin} = require('../middlewares/validation');
 const NotFoundError = require('../utils/errors/NotFoundError');
 const { ERROR_MESSAGES } = require('../config/constants');
+const { search } = require('../services/WikiService');
 
 // Public routes
 router.post('/signin', validateSignin, login);
 router.post('/signup', validateSignUp, createUser);
+router.get('/search', search);
 
 // Protected routes
-router.use(auth);
 router.use('/users', userRoutes);
 router.use('/figures', figureRoutes);
 

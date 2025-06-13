@@ -1,36 +1,26 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const Figure = require('../models/figure');
+const auth = require("../middlewares/auth");
+const {
+  getFigures,
+  likeFigure,
+  getFigureById,
+  getFigureByWikipediaId,
+  getFeaturedFigures,
+  removeSavedFigure,
+  saveFigure,
+  searchFigures,
+} = require("../controllers/figures");
 
-router.get('/', function(req, res) {
-    const { q, rows, start, sort } = req.query;
 
-    smithsonianService.searchFigures({
-        q,
-        rows: rows ? parseInt(rows) : 10,
-        start: start ? parseInt(start) : 0,
-        sort,
-    })
-    .then(function(results) {
-        res.json(results);
-    })
-    .catch(function(err) {
-        res.status(500).json({ error: err.message });
-    });
-});
+router.get("/", getFigures);
+router.get("/featured", getFeaturedFigures);
+router.get("/search", searchFigures);
+router.get("/wiki/:wikipediaId", getFigureByWikipediaId);
+router.get("/:id", getFigureById);
 
-router.get('/:id', function(req, res) {
-    const searchTerm = req.params.term;
-
-    smithsonianService.searchFigures({
-        q: searchTerm,
-    })
-    .then(function(results) {
-        res.json(results);
-    })
-    .catch(function(err) {
-        res.status(500).json({ error: err.message });
-    });
-});
+router.post("/save", auth, saveFigure);
+router.delete("/:figureId/unsave", auth, removeSavedFigure);
+router.post("/:figureId/like", auth, likeFigure);
 
 module.exports = router;

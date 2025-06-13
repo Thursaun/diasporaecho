@@ -1,59 +1,89 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const FigureSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: [true, 'Please add a name'],
-        trim: true,
-        maxlength: [50, 'Name cannot be more than 50 characters'],
-    },
-    birthYear: {
-        type: Number,
-        required: true,
-    },
-    deathYear: {
-        type: Number,
-    },
-    biography: {
-        type: String,
-        required: true,
-    },
-    contributions: [{
-        type: String,
-        required: true,
+  name: {
+    type: String,
+    required: [true, "Please add a name"],
+    trim: true,
+    maxlength: [50, "Name cannot be more than 50 characters"],
+    index: true,
+  },
+  imageUrl: {
+    type: String,
+    required: true,
+  },
+  description: {
+    type: String,
+    required: true,
+  },
+  years: {
+    type: String,
+  },
+  source: {
+    type: String,
+    default: "Wikipedia",
+  },
+  sourceUrl: {
+    type: String,
+    default: "https://www.si.edu/",
+  },
+  owners: {
+    type: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
     }],
-    imageUrl: {
-        type: String,
-    },
-    owner: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-    },
-    likes: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        default: [],
+    default: []
+  },
+  likes: {
+    type: Number,
+    default: 0,
+  },
+  likedBy: {
+    type: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
     }],
-    era: {
-        type: String,
-        required: true,
+    default: []  // This ensures it's always an array
+  },
+  wikipediaId: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true
+  },
+  contributions: [
+    {
+      type: String,
     },
-    region: {
-        type: String,
-        required: true,
+  ],
+  tags: [
+    {
+      type: String,
     },
-    references: [{
-       title: String,
-       author: String,
-       url: String,
-       publicationDate: Date,
-    }],
-    featuredQuote: {
-        type: String,
-    },
-    tags: [{
-        type: String,
-    }],
-});     
+  ],
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  category: {
+    type: String,
+    enum: [
+      "Intellectuals Leaders",
+      "Civil Rights Activists",
+      "Political Leaders",
+      "Educators & Scholars",
+      "Arts, Culture & Entertainment",
+      "Inventors & Innovators",
+      "Athletic Icons",
+      "Freedom Fighters",
+      "Pan-African Leaders",
+      "Literary Icons",
+    ],
+    required: true,
+  },
+});
 
-module.exports = mongoose.model('Figure', FigureSchema);
+FigureSchema.index({ name: 1, imageUrl: 1 }); 
+FigureSchema.index({ name: 'text', description: 'text', category: 'text' });
+
+module.exports = mongoose.model("Figure", FigureSchema);
