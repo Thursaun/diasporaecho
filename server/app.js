@@ -31,12 +31,12 @@ app.use('/api', routes);
 
 mongoose.connect(MONGODB_URL)
 .then(() => {
-  console.log('✅ Connected to MongoDB Atlas');
-  console.log('📊 Database:', mongoose.connection.name);
+  console.log('Connected to MongoDB Atlas');
+  console.log('Database:', mongoose.connection.name);
 })
 .catch(err => {
-  console.error('❌ MongoDB connection error:', err);
-  console.error('🔍 Connection string (without password):', MONGODB_URL.replace(/:[^:]*@/, ':***@'));
+  console.error('MongoDB connection error:', err);
+  console.error('Connection string (without password):', MONGODB_URL.replace(/:[^:]*@/, ':***@'));
   process.exit(1);
 });
 
