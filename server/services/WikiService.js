@@ -1,5 +1,5 @@
 require("dotenv").config();
-import fetch from 'node-fetch';
+const fetch = require("node-fetch");
 const Figure = require("../models/figure");
 const checkDupes = require("../helper/checkDupes");
 

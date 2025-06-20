@@ -2,7 +2,7 @@ const Figure = require("../models/figure");
 const User = require("../models/user");
 const { ERROR_MESSAGES } = require("../config/constants");
 const NotFoundError = require("../utils/errors/NotFoundError");
-const UnauthorizedError = require("../utils/errors/unauthorizedError");
+const UnauthorizedError = require("../utils/errors/UnauthorizedError");
 
 const getFigures = (req, res, next) => {
   Figure.find({})
