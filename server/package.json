@@ -1,5 +1,5 @@
 {
-  "name": "backend",
+  "name": "diaspora-echo-backend",
   "version": "1.0.0",
   "main": "app.js",
   "scripts": {
