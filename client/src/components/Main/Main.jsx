@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import FigureCard from "../Echoes/FigureCard";
 import { searchFigures, getFeaturedFigures } from "../../utils/api";
 
@@ -138,8 +139,8 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
           )}
 
           <div className="text-center mt-12">
-            <a
-              href="/echoes"
+            <Link
+              to="/echoes"
               className="inline-flex items-center px-8 py-4 bg-secondary text-white rounded-lg hover:bg-opacity-90 transition duration-300 font-semibold text-lg"
             >
               Explore All Figures
@@ -147,7 +148,7 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
                 <path d="M5 12h14"></path>
                 <path d="M12 5l7 7-7 7"></path>
               </svg>
-            </a>
+            </Link>
           </div>
         </div>
       </section>
