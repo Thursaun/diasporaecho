@@ -1,5 +1,5 @@
 export const BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://your-backend-domain.com/api'
+  ? 'https://thursaun.github.io/diasporaecho/api'
   : 'http://localhost:3000/api';
 
 export const ERROR_MESSAGES = {
