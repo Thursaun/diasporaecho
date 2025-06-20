@@ -18,4 +18,3 @@ export const SUCCESS_MESSAGES = {
     PROFILE_UPDATE_SUCCESS: 'Profile updated successfully.',
     PASSWORD_UPDATE_SUCCESS: 'Password updated successfully.',
 }
-

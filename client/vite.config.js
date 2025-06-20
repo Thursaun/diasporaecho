@@ -6,6 +6,9 @@ import autoprefixer from 'autoprefixer'
 export default defineConfig({
   plugins: [react()],
   base: '/diasporaecho/',
+  build: {
+    outDir: 'dist',
+  },
   css: {
     postcss: {
       plugins: [
