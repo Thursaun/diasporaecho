@@ -17,7 +17,9 @@ app.use(helmet());
 app.use(cors({
   origin: [
     'http://localhost:3001',
-    'https://thursaun.github.io'
+    'http://localhost:3000',
+    'https://thursaun.github.io',
+    'https://Thursaun.github.io'
   ],
   credentials: true
 }));

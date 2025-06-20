@@ -1,5 +1,5 @@
 export const BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://thursaun.github.io/diasporaecho/api'
+  ? 'https://diasporaecho-production.up.railway.app/api'
   : 'http://localhost:3000/api';
 
 export const ERROR_MESSAGES = {
