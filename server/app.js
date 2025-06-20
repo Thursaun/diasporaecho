@@ -9,9 +9,11 @@ const routes = require('./routes/index');
 
 
 require('dotenv').config();
-const { PORT , MONGODB_URL} = require('./config/config');
+const { MONGODB_URL} = require('./config/config');
 
 const app = express();
+
+const PORT = process.env.PORT || 3000;
 
 app.use(helmet());
 app.use(cors({
@@ -52,7 +54,7 @@ app.use((err, req, res, next) => {
     next();
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
     console.log('🔗 Backend ready for connections');
