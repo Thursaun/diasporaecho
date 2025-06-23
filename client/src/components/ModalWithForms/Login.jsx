@@ -39,6 +39,7 @@ function Login({ isOpen, onClose, onLogin, isLoading, onRegisterClick }) {
             <input
               type="email"
               name="email"
+              placeholder="Email"
               value={formValues.email || ""}
               onChange={handleInputChange}
               required
@@ -52,6 +53,7 @@ function Login({ isOpen, onClose, onLogin, isLoading, onRegisterClick }) {
             <input
               type="password"
               name="password"
+              placeholder="Password"
               value={formValues.password || ""}
               onChange={handleInputChange}
               required

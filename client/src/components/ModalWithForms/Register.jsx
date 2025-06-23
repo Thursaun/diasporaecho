@@ -28,6 +28,7 @@ function Register({ isOpen, onClose, onRegister, isLoading, onLoginClick }) {
                         <input
                             type="text"
                             name="name"
+                            placeholder="Username"
                             value={formValues.name || ""}
                             onChange={handleInputChange}
                             required
@@ -42,6 +43,7 @@ function Register({ isOpen, onClose, onRegister, isLoading, onLoginClick }) {
                         <input
                             type="email"
                             name="email"
+                            placeholder="Email"
                             value={formValues.email || ""}
                             onChange={handleInputChange}
                             required
@@ -56,6 +58,7 @@ function Register({ isOpen, onClose, onRegister, isLoading, onLoginClick }) {
                         <input
                             type="password"
                             name="password"
+                            placeholder="Password"
                             value={formValues.password || ""}
                             onChange={handleInputChange}
                             required
