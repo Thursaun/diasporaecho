@@ -21,7 +21,8 @@ app.use(cors({
     'http://localhost:5173', 
     'http://localhost:3000',
     'https://thursaun.github.io',
-    'https://Thursaun.github.io'
+    'https://Thursaun.github.io',
+    'https://diasporaecho.onrender.com'
   ],
   credentials: true
 }));

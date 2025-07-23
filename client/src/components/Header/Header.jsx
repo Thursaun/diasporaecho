@@ -59,7 +59,7 @@ function Header({ loggedIn, onRegisterClick, onSignOut }) {
               </>
             ) : (
               <li>
-                <button className="bg-secondary text-dark px-4 py-2 rounded hover:bg-opacity-80 transition-colors duration-200" onClick={onRegisterClick}>
+                <button className="bg-secondary text-white px-4 py-2 rounded hover:bg-opacity-80 transition-colors duration-200" onClick={onRegisterClick}>
                   Sign up
                 </button>
               </li>

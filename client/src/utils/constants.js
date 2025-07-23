@@ -1,5 +1,5 @@
 export const BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://noble-illumination-production.up.railway.app/api'
+  ? 'https://diasporaecho.onrender.com/api'
   : 'http://localhost:3000/api';
 
 export const ERROR_MESSAGES = {
