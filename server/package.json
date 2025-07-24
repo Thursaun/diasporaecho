@@ -3,30 +3,36 @@
   "version": "1.0.0",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node app.js",
-    "dev": "nodemon app.js"
+    "dev": "nodemon app.js",
+    "build": "echo 'No build step required for Node.js backend'",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "echo 'Dependencies installed successfully'"
   },
   "keywords": [],
-  "author": "",
+  "author": "Thursaun Canton",
   "license": "ISC",
-  "description": "",
+  "description": "Backend API for Diaspora Echo application",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
   "dependencies": {
-    "bcryptjs": "^3.0.2",
+    "bcryptjs": "^2.4.3",
     "celebrate": "^15.0.3",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "express-rate-limit": "^7.5.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
     "express-winston": "^4.2.0",
-    "helmet": "^8.1.0",
+    "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.13.1",
+    "mongoose": "^8.0.3",
     "node-fetch": "^2.7.0",
-    "validator": "^13.15.0",
-    "winston": "^3.17.0"
+    "validator": "^13.11.0",
+    "winston": "^3.11.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9"
+    "nodemon": "^3.0.2"
   }
 }
