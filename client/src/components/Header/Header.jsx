@@ -21,7 +21,7 @@ function Header({ loggedIn, onRegisterClick, onSignOut }) {
           <div className="flex items-center flex-shrink-0">
             <Link to="/" className="flex items-center gap-2 md:gap-3" onClick={closeMobileMenu}>
               <img src={logo} alt="Diaspora Echo Logo" className="h-10 w-10 md:h-12 md:w-12 rounded-full object-cover" />
-              <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white leading-tight">
+              <h1 className="flex items-center text-xl md:text-2xl lg:text-3xl font-bold text-white leading-tight">
                 Diaspora Echo
               </h1>
             </Link>
