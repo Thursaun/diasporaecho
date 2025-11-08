@@ -81,6 +81,20 @@ const FigureSchema = new mongoose.Schema({
     ],
     required: true,
   },
+  // PERFORMANCE: Featured figures tracking for daily rotation
+  isFeatured: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
+  featuredRank: {
+    type: Number,  // 1 = 🥇 Most Liked, 2 = 🥈 Popular, 3 = 🥉 Featured
+    default: null,
+  },
+  featuredSince: {
+    type: Date,
+    default: null,
+  },
 });
 
 FigureSchema.index({ name: 1, imageUrl: 1 }); 

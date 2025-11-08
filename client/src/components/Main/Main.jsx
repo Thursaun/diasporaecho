@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import FigureCard from "../Echoes/FigureCard";
 import LazyFigureCard from "../Echoes/LazyFigureCard";
@@ -114,22 +114,21 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
     }
   }, [onLikeFigureClick]);
 
-  // PERFORMANCE: Memoize featured figures calculation
-  const topFeaturedFigures = useMemo(() => {
-    return featuredFigures
-      .sort((a, b) => (b.likes || 0) - (a.likes || 0))
-      .slice(0, 3);
-  }, [featuredFigures]);
+  // PERFORMANCE: Featured figures already sorted by server (by featuredRank)
+  // No need to sort or slice - server returns exactly 3 figures in correct order
+  const topFeaturedFigures = featuredFigures;
 
+  // PERFORMANCE: Load featured figures (pre-selected daily, cached on server)
   useEffect(() => {
     setFeaturedLoading(true);
     getFeaturedFigures()
       .then((figures) => {
+        console.log('✅ Featured figures loaded:', figures.length);
         setFeaturedFigures(figures);
         setFeaturedLoading(false);
       })
       .catch((err) => {
-        console.error("Error fetching featured figures:", err);
+        console.error("❌ Error fetching featured figures:", err);
         setFeaturedLoading(false);
       });
   }, []);

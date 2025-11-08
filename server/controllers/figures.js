@@ -3,6 +3,7 @@ const User = require("../models/user");
 const { ERROR_MESSAGES } = require("../config/constants");
 const NotFoundError = require("../utils/errors/NotFoundError");
 const UnauthorizedError = require("../utils/errors/UnauthorizedError");
+const FeaturedFiguresService = require("../services/featuredFiguresService");
 
 const getFigures = (req, res, next) => {
   Figure.find({})
@@ -219,18 +220,16 @@ const unsaveFigure = (req, res, next) => {
     });
 };
 
-const getFeaturedFigures = (req, res, next) => {
-  Figure.find({})
-    .select("-owners -likedBy")
-    .sort({ likes: -1 })
-    .limit(3)
-    .exec()
-    .then((featuredFigures) => {
-      res.status(200).json(featuredFigures);
-    })
-    .catch((error) => {
-      next(error);
-    });
+// PERFORMANCE: Optimized featured figures using daily caching
+const getFeaturedFigures = async (req, res, next) => {
+  try {
+    // Smart get: Returns cached featured figures or refreshes if >24h old
+    const featuredFigures = await FeaturedFiguresService.getOrRefreshFeatured();
+    res.status(200).json(featuredFigures);
+  } catch (error) {
+    console.error('Error getting featured figures:', error);
+    next(error);
+  }
 };
 
 const searchFigures = (req, res, next) => {
