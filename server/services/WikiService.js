@@ -192,10 +192,11 @@ function calculateNameSimilarity(title, searchTerm) {
 
 async function getPageDetails(pageIds, searchTerm, isTopicSearch) {
   try {
+    // PERFORMANCE IMPROVEMENT: Fetch both extract AND wikibase data for better metadata
     const detailsQueryParams = new URLSearchParams({
       action: "query",
       format: "json",
-      prop: "extracts|pageimages|info|categories",
+      prop: "extracts|pageimages|info|categories|pageprops",
       pageids: pageIds,
       exintro: "true",
       explaintext: "true",
@@ -203,21 +204,132 @@ async function getPageDetails(pageIds, searchTerm, isTopicSearch) {
       pithumbsize: 300, // Add thumbnail as fallback
       inprop: "url",
       cllimit: "50",
+      ppprop: "wikibase_item", // Get Wikidata ID for precise dates
       origin: "*",
     });
 
     const detailsUrl = `${API_BASE_URL}?${detailsQueryParams.toString()}`;
     const response = await fetch(detailsUrl);
-    
+
     if (!response.ok) {
       throw new Error(`Error fetching page details: ${response.statusText}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+
+    // OPTIMIZATION: Fetch Wikidata for pages that have wikibase items
+    if (data && data.query && data.query.pages) {
+      await enrichWithWikidata(data.query.pages);
+    }
+
+    return data;
   } catch (error) {
     console.error("Error fetching page details:", error);
     return null;
   }
+}
+
+// NEW: Enrich Wikipedia data with precise Wikidata birth/death dates
+async function enrichWithWikidata(pages) {
+  try {
+    const wikidataIds = [];
+    const pageIdToWikidataId = {};
+
+    // Collect all Wikidata IDs
+    for (const pageId in pages) {
+      const wikidataId = pages[pageId].pageprops?.wikibase_item;
+      if (wikidataId) {
+        wikidataIds.push(wikidataId);
+        pageIdToWikidataId[pageId] = wikidataId;
+      }
+    }
+
+    if (wikidataIds.length === 0) return;
+
+    console.log(`🔍 Fetching Wikidata for ${wikidataIds.length} entities...`);
+
+    // Fetch Wikidata in batches of 50 (API limit)
+    const batchSize = 50;
+    for (let i = 0; i < wikidataIds.length; i += batchSize) {
+      const batch = wikidataIds.slice(i, i + batchSize);
+      await fetchWikidataBatch(batch, pageIdToWikidataId, pages);
+    }
+  } catch (error) {
+    console.error("Error enriching with Wikidata:", error);
+    // Don't throw - just log and continue with Wikipedia data
+  }
+}
+
+// NEW: Fetch Wikidata batch for precise dates
+async function fetchWikidataBatch(wikidataIds, pageIdToWikidataId, pages) {
+  try {
+    const wikidataUrl = `https://www.wikidata.org/w/api.php?${new URLSearchParams({
+      action: "wbgetentities",
+      ids: wikidataIds.join("|"),
+      props: "claims",
+      format: "json",
+      origin: "*",
+    })}`;
+
+    const response = await fetch(wikidataUrl);
+    if (!response.ok) return;
+
+    const wikidataResponse = await response.json();
+
+    if (!wikidataResponse.entities) return;
+
+    // Process each entity
+    for (const [wikidataId, entity] of Object.entries(wikidataResponse.entities)) {
+      if (!entity.claims) continue;
+
+      // P569 = date of birth, P570 = date of death
+      const birthClaim = entity.claims.P569?.[0];
+      const deathClaim = entity.claims.P570?.[0];
+
+      const birthYear = extractYearFromWikidataClaim(birthClaim);
+      const deathYear = extractYearFromWikidataClaim(deathClaim);
+
+      // Find the corresponding Wikipedia page
+      const pageId = Object.keys(pageIdToWikidataId).find(
+        id => pageIdToWikidataId[id] === wikidataId
+      );
+
+      if (pageId && pages[pageId]) {
+        // Store Wikidata dates for later use
+        pages[pageId].wikidataBirth = birthYear;
+        pages[pageId].wikidataDeath = deathYear;
+
+        if (birthYear || deathYear) {
+          console.log(`✅ Wikidata: ${pages[pageId].title} - Birth: ${birthYear || 'unknown'}, Death: ${deathYear || 'unknown'}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching Wikidata batch:", error);
+  }
+}
+
+// NEW: Extract year from Wikidata claim
+function extractYearFromWikidataClaim(claim) {
+  if (!claim || !claim.mainsnak || !claim.mainsnak.datavalue) {
+    return null;
+  }
+
+  const value = claim.mainsnak.datavalue.value;
+
+  // Wikidata dates come in format: +1948-08-30T00:00:00Z
+  if (value.time) {
+    const match = value.time.match(/^[+-]?(\d{4})/);
+    if (match) {
+      const year = parseInt(match[1]);
+      const currentYear = new Date().getFullYear();
+      if (year >= 1700 && year <= currentYear) {
+        return year;
+      }
+    }
+  }
+
+  return null;
 }
 
 function formatWikipediaData(data, searchTerm, peopleOnly = false) {
@@ -239,8 +351,42 @@ function formatWikipediaData(data, searchTerm, peopleOnly = false) {
       continue;
     }
 
-    const extractedYears = extractYearsFromText(page.extract);
-    const years = extractedYears || "Unknown";
+    // OPTIMIZATION: Use Wikidata first (most accurate), then extract from text
+    let years = "Unknown";
+
+    if (page.wikidataBirth || page.wikidataDeath) {
+      // Wikidata provides the most accurate dates
+      if (page.wikidataBirth && page.wikidataDeath) {
+        years = `${page.wikidataBirth}-${page.wikidataDeath}`;
+        console.log(`✅ Using Wikidata dates for ${page.title}: ${years}`);
+      } else if (page.wikidataBirth) {
+        // Check if person is likely still alive
+        const currentYear = new Date().getFullYear();
+        const age = currentYear - page.wikidataBirth;
+
+        if (age < 120 && page.extract && /\bis\s+(?:a|an|the)/.test(page.extract)) {
+          years = `${page.wikidataBirth}-Present`;
+          console.log(`✅ Using Wikidata birth (living) for ${page.title}: ${years}`);
+        } else {
+          years = `${page.wikidataBirth}`;
+          console.log(`✅ Using Wikidata birth only for ${page.title}: ${years}`);
+        }
+      } else if (page.wikidataDeath) {
+        years = `Unknown-${page.wikidataDeath}`;
+        console.log(`⚠️ Only death date from Wikidata for ${page.title}: ${years}`);
+      }
+    } else {
+      // Fallback to text extraction
+      const extractedYears = extractYearsFromText(page.extract);
+      years = extractedYears || "Unknown";
+
+      if (extractedYears) {
+        console.log(`📝 Extracted from text for ${page.title}: ${years}`);
+      } else {
+        console.log(`❌ No dates found for ${page.title}`);
+      }
+    }
+
     const tags = extractTags(page);
     const contributions = extractContributions(page.extract);
 
@@ -248,7 +394,7 @@ function formatWikipediaData(data, searchTerm, peopleOnly = false) {
       _id: pageId,
       wikipediaId: pageId,
       name: page.title,
-      imageUrl: page.original?.source || page.thumbnail?.source || 
+      imageUrl: page.original?.source || page.thumbnail?.source ||
         "https://via.placeholder.com/300x400?text=No+Image",
       description: page.extract || "No description available",
       years: years,
@@ -261,6 +407,7 @@ function formatWikipediaData(data, searchTerm, peopleOnly = false) {
     });
   }
 
+  console.log(`Formatted ${figures.length} figures (${figures.filter(f => f.years !== 'Unknown').length} with dates)`);
   return figures;
 }
 
@@ -293,7 +440,7 @@ function extractYearsFromText(text) {
   const cleanText = textToAnalyze.replace(/\s+/g, ' ').replace(/[–—]/g, '-').trim();
   console.log(`🔍 Extracting years from first line: "${cleanText}"`);
   
-  // Enhanced patterns specifically for Wikipedia's first-line format
+  // OPTIMIZATION: Enhanced patterns for better year extraction
   const patterns = [
     // 1. Wikipedia's most common format: Name (born Other Name, c. March 1822 – March 10, 1913)
     {
@@ -301,47 +448,89 @@ function extractYearsFromText(text) {
       type: 'birth-death',
       priority: 1
     },
-    
+
     // 2. Simple parenthetical with years: Name (1929-1968), Name (c. 1822-1913)
     {
       regex: /\((?:c\.\s*)?(\d{4})\s*[-–—]\s*(\d{4})\)/g,
-      type: 'birth-death', 
+      type: 'birth-death',
       priority: 2
     },
-    
-    // 3. Born in parentheses only: Name (born 1961)
+
+    // NEW 3. Parenthetical with "born" and death year: (born 1929 – died 1968)
     {
-      regex: /\(born[^0-9]*(\d{4})\)/gi,
-      type: 'birth-only',
+      regex: /\(born[^0-9]*(\d{4})[^0-9]*(?:died|death|–|—|-)[^0-9]*(\d{4})\)/gi,
+      type: 'birth-death',
       priority: 3
     },
-    
-    // 4. Start of sentence with full dates: Born March 1822, died March 1913
+
+    // 4. Born in parentheses only: Name (born 1961), (b. 1961)
     {
-      regex: /^[^.]*born\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)?\s*\d{1,2}?,?\s*(\d{4})[^0-9]*(?:died|death)\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)?\s*\d{1,2}?,?\s*(\d{4})/gi,
-      type: 'birth-death',
+      regex: /\((?:born|b\.)[^0-9]*(\d{4})\)/gi,
+      type: 'birth-only',
       priority: 4
     },
-    
-    // 5. Simple born/died in first line: born 1948, died 1969
+
+    // NEW 5. Parenthetical abbreviations: (b. 1822 – d. 1913)
     {
-      regex: /born[^0-9]*(\d{4})[^0-9]*(?:died|death)[^0-9]*(\d{4})/gi,
+      regex: /\(b\.\s*(\d{4})\s*[-–—]\s*d\.\s*(\d{4})\)/gi,
       type: 'birth-death',
       priority: 5
     },
-    
-    // 6. Born with full date: born August 30, 1948
+
+    // 6. Start of sentence with full dates: Born March 1822, died March 1913
+    {
+      regex: /^[^.]*born\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)?\s*\d{1,2}?,?\s*(\d{4})[^0-9]*(?:died|death)\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)?\s*\d{1,2}?,?\s*(\d{4})/gi,
+      type: 'birth-death',
+      priority: 6
+    },
+
+    // 7. Simple born/died in first line: born 1948, died 1969
+    {
+      regex: /born[^0-9]*(\d{4})[^0-9]*(?:died|death)[^0-9]*(\d{4})/gi,
+      type: 'birth-death',
+      priority: 7
+    },
+
+    // NEW 8. Reverse order with died first: died 1968, born 1929 (less common but exists)
+    {
+      regex: /(?:died|death)[^0-9]*(\d{4})[^0-9]*born[^0-9]*(\d{4})/gi,
+      type: 'death-birth-reverse',
+      priority: 8
+    },
+
+    // NEW 9. Year range at start without "born": Name (1822–1913) was a...
+    {
+      regex: /^\s*[A-Z][^(]*\((\d{4})[-–—](\d{4})\)\s+(?:was|is)/,
+      type: 'birth-death',
+      priority: 9
+    },
+
+    // 10. Born with full date: born August 30, 1948
     {
       regex: /born\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+(\d{4})/gi,
       type: 'birth-only',
-      priority: 6
+      priority: 10
     },
-    
-    // 7. Simple born pattern: born 1948  
+
+    // NEW 11. Born on specific date: born on August 30, 1948
+    {
+      regex: /born\s+on\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+(\d{4})/gi,
+      type: 'birth-only',
+      priority: 11
+    },
+
+    // 12. Simple born pattern: born 1948
     {
       regex: /born[^0-9]*(\d{4})/gi,
       type: 'birth-only',
-      priority: 7
+      priority: 12
+    },
+
+    // NEW 13. Age in parentheses with current year calculation: (age 75) or (aged 75)
+    {
+      regex: /\((?:age|aged)\s+(\d{1,3})\)/gi,
+      type: 'age-based',
+      priority: 13
     }
   ];
   
@@ -353,42 +542,70 @@ function extractYearsFromText(text) {
   // Try each pattern and find the best match
   for (const pattern of patterns) {
     const matches = [...cleanText.matchAll(pattern.regex)];
-    
+
     if (matches.length > 0) {
       const match = matches[0];
       console.log(`📅 Pattern match (${pattern.type}, priority ${pattern.priority}):`, match[0]);
-      
+
       if (pattern.type === 'birth-death' && match[1] && match[2]) {
         const year1 = parseInt(match[1]);
         const year2 = parseInt(match[2]);
-        
+
         // Validate years are reasonable
         const currentYear = new Date().getFullYear();
-        if (year1 >= 1700 && year1 <= currentYear && 
-            year2 >= 1700 && year2 <= currentYear && 
+        if (year1 >= 1700 && year1 <= currentYear &&
+            year2 >= 1700 && year2 <= currentYear &&
             year2 > year1 && (year2 - year1) < 120) {
-          
+
           if (pattern.priority < bestPriority) {
             birthYear = year1;
             deathYear = year2;
             bestMatch = pattern;
             bestPriority = pattern.priority;
             console.log(`✅ New best birth-death match: ${birthYear}-${deathYear} (priority ${bestPriority})`);
-            
+
             // If we found a high-priority match, stop looking
             if (bestPriority <= 2) {
               break;
             }
           }
         }
-      } else if (pattern.type === 'birth-only' && match[1] && !birthYear && bestPriority > 6) {
+      } else if (pattern.type === 'death-birth-reverse' && match[1] && match[2]) {
+        // Handle reverse order (death year first, birth year second in regex)
+        const deathYr = parseInt(match[1]);
+        const birthYr = parseInt(match[2]);
+
+        const currentYear = new Date().getFullYear();
+        if (birthYr >= 1700 && birthYr <= currentYear &&
+            deathYr >= 1700 && deathYr <= currentYear &&
+            deathYr > birthYr && (deathYr - birthYr) < 120) {
+
+          if (pattern.priority < bestPriority) {
+            birthYear = birthYr;
+            deathYear = deathYr;
+            bestMatch = pattern;
+            bestPriority = pattern.priority;
+            console.log(`✅ Reverse order match: ${birthYear}-${deathYear} (priority ${bestPriority})`);
+          }
+        }
+      } else if (pattern.type === 'birth-only' && match[1] && !birthYear && bestPriority > 9) {
         const year = parseInt(match[1]);
         const currentYear = new Date().getFullYear();
-        
+
         if (year >= 1700 && year <= currentYear) {
           birthYear = year;
           bestPriority = pattern.priority;
           console.log(`📅 Found birth year: ${birthYear} (priority ${bestPriority})`);
+        }
+      } else if (pattern.type === 'age-based' && match[1] && !birthYear && bestPriority > 12) {
+        // Calculate birth year from age
+        const age = parseInt(match[1]);
+        const currentYear = new Date().getFullYear();
+
+        if (age >= 0 && age < 120) {
+          birthYear = currentYear - age;
+          bestPriority = pattern.priority;
+          console.log(`📅 Calculated birth year from age ${age}: ${birthYear} (priority ${bestPriority})`);
         }
       }
     }

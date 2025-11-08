@@ -79,6 +79,7 @@ class FeaturedFiguresService {
       const featured = await Figure.find({ isFeatured: true })
         .sort({ featuredRank: 1 }) // Sort by rank: 1, 2, 3
         .limit(3)
+        .select('+likedBy') // IMPORTANT: Include likedBy field for client-side like status check
         .lean() // PERFORMANCE: Return plain JS objects instead of Mongoose documents
         .exec();
 

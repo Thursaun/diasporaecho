@@ -62,7 +62,7 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
       const updatedFigure = await onLikeFigureClick(figure);
       console.log(`✅ Server like successful for ${figure.name}, new count: ${updatedFigure.likes}`);
 
-      // PERFORMANCE: Update only the specific figure with server response
+      // PERFORMANCE: Update only the specific figure with server response (including likedBy)
       setAllFigures((prevFigures) =>
         prevFigures.map((fig) => {
           const currentId = fig._id || fig.wikipediaId;
@@ -70,6 +70,7 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
             return {
               ...fig,
               likes: updatedFigure.likes, // Use actual server count
+              likedBy: updatedFigure.likedBy, // Update likedBy array for like status check
             };
           }
           return fig;

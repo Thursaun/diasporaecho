@@ -68,12 +68,12 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
       const updatedFigure = await onLikeFigureClick(figure);
       console.log(`✅ Server like successful for ${figure.name}, new count: ${updatedFigure.likes}`);
 
-      // PERFORMANCE: Update only the specific figure with server response
+      // PERFORMANCE: Update only the specific figure with server response (including likedBy)
       setFeaturedFigures((prevFigures) =>
         prevFigures.map((fig) => {
           const currentId = fig._id || fig.wikipediaId;
           if (currentId === figureId) {
-            return { ...fig, likes: updatedFigure.likes };
+            return { ...fig, likes: updatedFigure.likes, likedBy: updatedFigure.likedBy };
           }
           return fig;
         })
@@ -83,7 +83,7 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
         prevResults.map((fig) => {
           const currentId = fig._id || fig.wikipediaId;
           if (currentId === figureId) {
-            return { ...fig, likes: updatedFigure.likes };
+            return { ...fig, likes: updatedFigure.likes, likedBy: updatedFigure.likedBy };
           }
           return fig;
         })

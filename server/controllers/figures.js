@@ -249,7 +249,7 @@ const searchFigures = (req, res, next) => {
       { tags: { $in: [searchRegex] } }
     ]
   })
-    .select('-owners')
+    .select('-owners +likedBy') // Exclude owners but include likedBy for like status check
     .then(figures => {
       res.status(200).json(figures);
     })
