@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import FigureCard from "../Echoes/FigureCard";
+import LazyFigureCard from "../Echoes/LazyFigureCard";
 import { searchFigures, getFeaturedFigures } from "../../utils/api";
+import { fuzzySearchFilter } from "../../utils/fuzzySearch";
 
-
-function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick }) {
+function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick, currentUser }) {
   const [searchResults, setSearchResults] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -12,25 +13,119 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
   const [featuredFigures, setFeaturedFigures] = useState([]);
   const [featuredLoading, setFeaturedLoading] = useState(true);
 
-  const checkIsSaved = (figure) => {
-  if (!figure || !savedFigures) return false;
-  
-  const figureId = figure.wikipediaId || figure._id;
-  
-  return savedFigures.some((savedFigure) => {
-    const savedId = savedFigure.wikipediaId || savedFigure._id;
-    return savedId === figureId;
-  });
-};
+  // Debounce timer ref
+  const debounceTimerRef = useRef(null);
+
+  // PERFORMANCE: Memoized saved check function
+  const checkIsSaved = useCallback((figure) => {
+    if (!figure || !savedFigures) return false;
+
+    const figureId = figure.wikipediaId || figure._id;
+
+    return savedFigures.some((savedFigure) => {
+      const savedId = savedFigure.wikipediaId || savedFigure._id;
+      return savedId === figureId;
+    });
+  }, [savedFigures]);
+
+  // PERFORMANCE: Memoized liked check function
+  const checkIsLiked = useCallback((figure) => {
+    if (!figure || !currentUser) return false;
+
+    const likedBy = figure.likedBy || [];
+    return likedBy.includes(currentUser._id);
+  }, [currentUser]);
+
+  // PERFORMANCE FIX: Optimized like handler with instant UI update
+  const handleLikeClick = useCallback(async (figure) => {
+    const figureId = figure._id || figure.wikipediaId;
+    console.log(`🎯 Main handleLikeClick: ${figure.name} (current likes: ${figure.likes})`);
+
+    // PERFORMANCE: Optimistic update - immediately update UI for featured figures
+    setFeaturedFigures((prevFigures) =>
+      prevFigures.map((fig) => {
+        const currentId = fig._id || fig.wikipediaId;
+        if (currentId === figureId) {
+          return { ...fig, likes: (fig.likes || 0) + 1 };
+        }
+        return fig;
+      })
+    );
+
+    // PERFORMANCE: Optimistic update - immediately update UI for search results
+    setSearchResults((prevResults) =>
+      prevResults.map((fig) => {
+        const currentId = fig._id || fig.wikipediaId;
+        if (currentId === figureId) {
+          return { ...fig, likes: (fig.likes || 0) + 1 };
+        }
+        return fig;
+      })
+    );
+
+    // Call parent handler in background
+    try {
+      const updatedFigure = await onLikeFigureClick(figure);
+      console.log(`✅ Server like successful for ${figure.name}, new count: ${updatedFigure.likes}`);
+
+      // PERFORMANCE: Update only the specific figure with server response
+      setFeaturedFigures((prevFigures) =>
+        prevFigures.map((fig) => {
+          const currentId = fig._id || fig.wikipediaId;
+          if (currentId === figureId) {
+            return { ...fig, likes: updatedFigure.likes };
+          }
+          return fig;
+        })
+      );
+
+      setSearchResults((prevResults) =>
+        prevResults.map((fig) => {
+          const currentId = fig._id || fig.wikipediaId;
+          if (currentId === figureId) {
+            return { ...fig, likes: updatedFigure.likes };
+          }
+          return fig;
+        })
+      );
+    } catch (error) {
+      console.error("❌ Like action failed:", error);
+
+      // PERFORMANCE: Revert optimistic update on error
+      setFeaturedFigures((prevFigures) =>
+        prevFigures.map((fig) => {
+          const currentId = fig._id || fig.wikipediaId;
+          if (currentId === figureId) {
+            return { ...fig, likes: (fig.likes || 1) - 1 };
+          }
+          return fig;
+        })
+      );
+
+      setSearchResults((prevResults) =>
+        prevResults.map((fig) => {
+          const currentId = fig._id || fig.wikipediaId;
+          if (currentId === figureId) {
+            return { ...fig, likes: (fig.likes || 1) - 1 };
+          }
+          return fig;
+        })
+      );
+    }
+  }, [onLikeFigureClick]);
+
+  // PERFORMANCE: Memoize featured figures calculation
+  const topFeaturedFigures = useMemo(() => {
+    return featuredFigures
+      .sort((a, b) => (b.likes || 0) - (a.likes || 0))
+      .slice(0, 3);
+  }, [featuredFigures]);
 
   useEffect(() => {
     setFeaturedLoading(true);
     getFeaturedFigures()
       .then((figures) => {
-        const topFigures = figures
-          .sort((a, b) => (b.likes || 0) - (a.likes || 0))
-          .slice(0, 3);
-        setFeaturedFigures(topFigures);
+        setFeaturedFigures(figures);
         setFeaturedLoading(false);
       })
       .catch((err) => {
@@ -39,18 +134,22 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
       });
   }, []);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (!searchQuery) {
+  // PERFORMANCE: Debounced search function to reduce API calls
+  const performSearch = useCallback((query) => {
+    if (!query || query.trim().length < 2) {
+      setSearchResults([]);
       return;
     }
+
     setIsLoading(true);
     setError(null);
 
-    searchFigures({ query: searchQuery })
+    searchFigures({ query })
       .then((results) => {
         console.log("Search results:", results);
-        setSearchResults(results);
+        // PERFORMANCE: Apply fuzzy search filter for better matching
+        const fuzzyFiltered = fuzzySearchFilter(results, query);
+        setSearchResults(fuzzyFiltered);
         setIsLoading(false);
       })
       .catch((err) => {
@@ -58,7 +157,38 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
         setError("Failed to fetch search results. Please try again.");
         setIsLoading(false);
       });
-  };
+  }, []);
+
+  // PERFORMANCE: Debounce search input to reduce API calls (300ms delay)
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    if (searchQuery && searchQuery.trim().length >= 2) {
+      debounceTimerRef.current = setTimeout(() => {
+        performSearch(searchQuery);
+      }, 300);
+    } else if (!searchQuery) {
+      setSearchResults([]);
+      setIsLoading(false);
+    }
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [searchQuery, performSearch]);
+
+  // Handle form submission (immediate search)
+  const handleSearch = useCallback((e) => {
+    e.preventDefault();
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    performSearch(searchQuery);
+  }, [searchQuery, performSearch]);
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -86,16 +216,18 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
         </div>
       </section>
 
-      <section className="py-16 bg-white">
+      <section className={`bg-white transition-all duration-500 ${searchQuery ? 'py-4' : 'py-16'}`}>
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          <div className={`text-center transition-all duration-500 ${searchQuery ? 'mb-3' : 'mb-12'}`}>
+            <h2 className={`font-bold text-gray-900 transition-all duration-500 ${searchQuery ? 'text-base md:text-lg mb-1' : 'text-3xl md:text-4xl mb-4'}`}>
               Featured Figures
             </h2>
-            <div className="w-72 h-1 bg-gradient-to-r from-secondary to-primary mx-auto mb-4"></div>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Discover the most celebrated figures whose stories continue to inspire and educate
-            </p>
+            <div className={`bg-gradient-to-r from-secondary to-primary mx-auto transition-all duration-500 ${searchQuery ? 'w-20 h-px mb-1' : 'w-72 h-1 mb-4'}`}></div>
+            {!searchQuery && (
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Discover the most celebrated figures whose stories continue to inspire and educate
+              </p>
+            )}
           </div>
 
           {featuredLoading ? (
@@ -103,16 +235,22 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-secondary"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {featuredFigures.map((figure, index) => (
+            <div className={`grid transition-all duration-500 ${
+              searchQuery
+                ? 'grid-cols-3 gap-2 scale-50 origin-top -mb-[20%]'
+                : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8'
+            }`}>
+              {topFeaturedFigures.map((figure, index) => (
                 <div
                   key={figure._id}
-                  className={`transform transition-all duration-300 hover:scale-105 ${
-                    index === 0 ? 'md:col-span-2 lg:col-span-1' : ''
+                  className={`transform transition-all duration-300 ${
+                    searchQuery ? '' : 'hover:scale-105'
+                  } ${
+                    !searchQuery && index === 0 ? 'md:col-span-2 lg:col-span-1' : ''
                   }`}
                 >
                   <div className="relative">
-                    {index < 3 && (
+                    {!searchQuery && index < 3 && (
                       <div className="absolute -top-2 -right-2 z-10">
                         <div className={`px-3 py-1 rounded-full text-white text-xs font-bold shadow-lg ${
                           index === 0 ? 'bg-yellow-500' :
@@ -127,10 +265,12 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
                     )}
                     <FigureCard
                       figure={figure}
-                      onLikeFigureClick={onLikeFigureClick}
+                      onLikeFigureClick={handleLikeClick}
                       onSaveFigureClick={onSaveFigureClick}
                       onLoginClick={onLoginClick}
                       isSaved={checkIsSaved(figure)}
+                      isLiked={checkIsLiked(figure)}
+                      priority={true}
                     />
                   </div>
                 </div>
@@ -138,30 +278,32 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
             </div>
           )}
 
-          <div className="text-center mt-12">
-            <Link
-              to="/echoes"
-              className="inline-flex items-center px-8 py-4 bg-secondary text-white rounded-lg hover:bg-opacity-90 transition duration-300 font-semibold text-lg"
-            >
-              Explore All Figures
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2">
-                <path d="M5 12h14"></path>
-                <path d="M12 5l7 7-7 7"></path>
-              </svg>
-            </Link>
-          </div>
+          {!searchQuery && (
+            <div className="text-center mt-12">
+              <Link
+                to="/echoes"
+                className="inline-flex items-center px-8 py-4 bg-secondary text-white rounded-lg hover:bg-opacity-90 transition duration-300 font-semibold text-lg"
+              >
+                Explore All Figures
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2">
+                  <path d="M5 12h14"></path>
+                  <path d="M12 5l7 7-7 7"></path>
+                </svg>
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
       {searchQuery && (
-        <section className="py-16 bg-gray-50">
+        <section className="py-2 bg-gray-50">
           <div className="container mx-auto px-4">
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold text-gray-900 mb-1">
                 Search Results
               </h2>
-              <p className="text-gray-600">
-                {searchResults.length > 0 
+              <p className="text-sm text-gray-600">
+                {searchResults.length > 0
                   ? `Found ${searchResults.length} result${searchResults.length !== 1 ? 's' : ''} for "${searchQuery}"`
                   : `Searching for "${searchQuery}"...`
                 }
@@ -209,13 +351,14 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
             {searchResults.length > 0 && !isLoading && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {searchResults.map((figure) => (
-                  <FigureCard
+                  <LazyFigureCard
                     key={figure.wikipediaId || figure._id || `temp-${Date.now()}`}
                     figure={figure}
-                    onLikeFigureClick={onLikeFigureClick}
+                    onLikeFigureClick={handleLikeClick}
                     onSaveFigureClick={onSaveFigureClick}
                     onLoginClick={onLoginClick}
                     isSaved={checkIsSaved(figure)}
+                    isLiked={checkIsLiked(figure)}
                   />
                 ))}
               </div>

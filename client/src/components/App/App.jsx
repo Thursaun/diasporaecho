@@ -197,19 +197,19 @@ const App = () => {
   if (!loggedIn) {
     setPendingLikeAction(figure);
     openModal("login");
-    return;
+    return Promise.reject(new Error("User not logged in"));
   }
 
   const figureId = figure._id || figure.wikipediaId || figure.id;
 
   if (!figureId) {
     console.error("No valid figure ID found for like:", figure);
-    return;
+    return Promise.reject(new Error("No valid figure ID"));
   }
 
   console.log("Liking figure with ID:", figureId);
 
-  likeFigure(figureId)
+  return likeFigure(figureId)
     .then((updatedFigure) => {
       console.log("Like response:", updatedFigure);
 
@@ -254,8 +254,14 @@ const App = () => {
         return prevSelected;
       });
       fetchSavedFigures();
+
+      // Return the updated figure for child components
+      return updatedFigure;
     })
-    .catch((err) => console.log("Error liking figure:", err));
+    .catch((err) => {
+      console.log("Error liking figure:", err);
+      throw err;
+    });
 };
 
   return (
@@ -278,6 +284,7 @@ const App = () => {
                 onSaveFigureClick={handleSaveFigureClick}
                 onLikeFigureClick={handleLikeFigureClick}
                 onLoginClick={() => openModal("login")}
+                currentUser={currentUser}
               />
             }
           />
@@ -289,6 +296,7 @@ const App = () => {
                 onSaveFigureClick={handleSaveFigureClick}
                 onLikeFigureClick={handleLikeFigureClick}
                 onLoginClick={() => openModal("login")}
+                currentUser={currentUser}
               />
             }
           />

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { getFigures } from '../../utils/api'; 
-import FigureCard from './FigureCard';
+import { getFigures } from '../../utils/api';
+import LazyFigureCard from './LazyFigureCard';
 
 // =============================================================================
 // PERFORMANCE IMPROVEMENTS: Pagination & Loading Optimization
@@ -23,17 +23,76 @@ const categories = [
 const FIGURES_PER_PAGE = 12;
 const INITIAL_LOAD = 8; // Load only 8 cards initially for faster rendering
 
-function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigures = [] }) {
+function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigures = [], currentUser }) {
   // =============================================================================
   // STATE MANAGEMENT: Optimized for performance
   // =============================================================================
-  
+
   const [allFigures, setAllFigures] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [activeCategory, setActiveCategory] = useState("all");
   const [displayCount, setDisplayCount] = useState(INITIAL_LOAD);
+
+  // =============================================================================
+  // PERFORMANCE IMPROVEMENT: Optimized like handler with local state update
+  // =============================================================================
+
+  const handleLikeClick = useCallback(async (figure) => {
+    const figureId = figure._id || figure.wikipediaId;
+    console.log(`🎯 Echoes handleLikeClick: ${figure.name} (current likes: ${figure.likes})`);
+
+    // PERFORMANCE: Optimistic update - immediately update UI
+    setAllFigures((prevFigures) =>
+      prevFigures.map((fig) => {
+        const currentId = fig._id || fig.wikipediaId;
+        if (currentId === figureId) {
+          return {
+            ...fig,
+            likes: (fig.likes || 0) + 1, // Optimistically increment
+          };
+        }
+        return fig;
+      })
+    );
+
+    // Call parent handler in background
+    try {
+      const updatedFigure = await onLikeFigureClick(figure);
+      console.log(`✅ Server like successful for ${figure.name}, new count: ${updatedFigure.likes}`);
+
+      // PERFORMANCE: Update only the specific figure with server response
+      setAllFigures((prevFigures) =>
+        prevFigures.map((fig) => {
+          const currentId = fig._id || fig.wikipediaId;
+          if (currentId === figureId) {
+            return {
+              ...fig,
+              likes: updatedFigure.likes, // Use actual server count
+            };
+          }
+          return fig;
+        })
+      );
+    } catch (error) {
+      console.error("❌ Like action failed:", error);
+
+      // PERFORMANCE: Revert optimistic update on error
+      setAllFigures((prevFigures) =>
+        prevFigures.map((fig) => {
+          const currentId = fig._id || fig.wikipediaId;
+          if (currentId === figureId) {
+            return {
+              ...fig,
+              likes: (fig.likes || 1) - 1, // Revert the increment
+            };
+          }
+          return fig;
+        })
+      );
+    }
+  }, [onLikeFigureClick]);
 
   // =============================================================================
   // PERFORMANCE IMPROVEMENT: Memoized Calculations
@@ -77,13 +136,21 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
   // PERFORMANCE: Memoize saved figure checking to avoid recalculation
   const isFigureSaved = useCallback((figure) => {
     if (!figure || !savedFigures) return false;
-    
+
     const figureId = figure.wikipediaId || figure._id;
     return savedFigures.some((savedFigure) => {
       const savedId = savedFigure.wikipediaId || savedFigure._id;
       return savedId === figureId;
     });
   }, [savedFigures]);
+
+  // PERFORMANCE: Memoize liked figure checking to avoid recalculation
+  const isFigureLiked = useCallback((figure) => {
+    if (!figure || !currentUser) return false;
+
+    const likedBy = figure.likedBy || [];
+    return likedBy.includes(currentUser._id);
+  }, [currentUser]);
 
   // PERFORMANCE: Optimized load more function with loading state
   const loadMoreFigures = useCallback(() => {
@@ -265,13 +332,14 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {currentFigures.map((figure) => (
-              <FigureCard
+              <LazyFigureCard
                 key={`${figure._id || figure.wikipediaId}-${figure.category}`} // Enhanced key for better React optimization
                 figure={figure}
                 onSaveFigureClick={() => onSaveFigureClick(figure)}
-                onLikeFigureClick={() => onLikeFigureClick(figure)}
+                onLikeFigureClick={handleLikeClick}
                 onLoginClick={onLoginClick}
                 isSaved={isFigureSaved(figure)}
+                isLiked={isFigureLiked(figure)}
               />
             ))}
 
