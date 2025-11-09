@@ -407,10 +407,11 @@ function FigureDetail({
                                                 </a>
                                             </li>
                                         </ol>
-                                </article>
+                                    </article>
+                                </div>
                             </div>
-                        </div>
-                    </main>
+                        </main>
+                    </div>
                 </div>
             </div>
         </div>
