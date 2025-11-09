@@ -181,12 +181,24 @@ function FigureDetail({
         <div className="min-h-screen bg-black">
             {/* MODERN: Dramatic Hero Section with Image-Filled Text */}
             <div className="relative min-h-screen bg-black overflow-hidden flex items-center justify-center">
-                {/* Loading State */}
-                {!imageLoaded && (
-                    <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent"></div>
-                    </div>
-                )}
+                {/* Background Image with Overlay */}
+                <div className="absolute inset-0">
+                    {!imageLoaded && (
+                        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent"></div>
+                        </div>
+                    )}
+                    <img
+                        src={imageUrl}
+                        alt={name}
+                        className={`w-full h-full object-cover transition-opacity duration-1000 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                        onLoad={() => setImageLoaded(true)}
+                    />
+                    {/* Dark gradient overlay for text readability */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black"></div>
+                    {/* Additional gradient for bottom fade */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                </div>
 
                 {/* Back Button - Positioned Absolutely */}
                 <button
@@ -203,14 +215,6 @@ function FigureDetail({
                 <div className="relative z-10 container mx-auto px-4 text-center">
                     {/* Image-Filled Text Effect */}
                     <div className="relative inline-block">
-                        {/* Hidden image for background-clip effect */}
-                        <img
-                            src={imageUrl}
-                            alt={name}
-                            className="absolute inset-0 w-full h-full object-cover opacity-0"
-                            onLoad={() => setImageLoaded(true)}
-                        />
-
                         {/* Text with image fill */}
                         <h1
                             className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black uppercase leading-none py-4 sm:py-6 md:py-8"
