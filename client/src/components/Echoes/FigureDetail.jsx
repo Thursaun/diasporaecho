@@ -179,101 +179,110 @@ function FigureDetail({
 
     return (
         <div className="min-h-screen bg-black">
-            {/* MODERN: Dramatic Hero Section with Figure Image Background */}
-            <div className="relative min-h-[50vh] sm:min-h-[60vh] md:min-h-[70vh] bg-black overflow-hidden">
-                {/* Background Image with Overlay */}
-                <div className="absolute inset-0">
-                    {!imageLoaded && (
-                        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
-                            <div className="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent"></div>
-                        </div>
-                    )}
-                    <img
-                        src={imageUrl}
-                        alt={name}
-                        className={`w-full h-full object-cover transition-opacity duration-1000 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-                        onLoad={() => setImageLoaded(true)}
-                    />
-                    {/* Dark gradient overlay for text readability */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black"></div>
-                    {/* Additional gradient for bottom fade */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
-                </div>
+            {/* MODERN: Dramatic Hero Section with Image-Filled Text */}
+            <div className="relative min-h-screen bg-black overflow-hidden flex items-center justify-center">
+                {/* Loading State */}
+                {!imageLoaded && (
+                    <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent"></div>
+                    </div>
+                )}
 
-                {/* Content */}
-                <div className="relative z-10 container mx-auto px-4 py-4 sm:py-6 min-h-[50vh] sm:min-h-[60vh] md:min-h-[70vh] flex flex-col">
-                    {/* Back Button */}
-                    <button
-                        onClick={() => navigate(-1)}
-                        className="inline-flex items-center text-white/90 hover:text-white transition-colors group mb-auto min-h-[44px] px-2 sm:px-0"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 transition-transform group-hover:-translate-x-1">
-                            <path d="M15 18l-6-6 6-6" />
-                        </svg>
-                        <span className="text-sm sm:text-base font-medium">Back</span>
-                    </button>
+                {/* Back Button - Positioned Absolutely */}
+                <button
+                    onClick={() => navigate(-1)}
+                    className="absolute top-4 left-4 z-20 inline-flex items-center text-white/90 hover:text-white transition-colors group min-h-[44px] px-4 py-2 bg-black/40 backdrop-blur-md rounded-lg"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 transition-transform group-hover:-translate-x-1">
+                        <path d="M15 18l-6-6 6-6" />
+                    </svg>
+                    <span className="text-sm sm:text-base font-medium">Back</span>
+                </button>
 
-                    {/* Hero Content - Name and Actions */}
-                    <div className="mt-auto pb-6 sm:pb-8 md:pb-12">
-                        {/* Figure Name with dramatic styling */}
-                        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 sm:mb-6 leading-tight text-white drop-shadow-2xl">
+                {/* Main Content - Centered */}
+                <div className="relative z-10 container mx-auto px-4 text-center">
+                    {/* Image-Filled Text Effect */}
+                    <div className="relative inline-block">
+                        {/* Hidden image for background-clip effect */}
+                        <img
+                            src={imageUrl}
+                            alt={name}
+                            className="absolute inset-0 w-full h-full object-cover opacity-0"
+                            onLoad={() => setImageLoaded(true)}
+                        />
+
+                        {/* Text with image fill */}
+                        <h1
+                            className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black uppercase leading-none py-4 sm:py-6 md:py-8"
+                            style={{
+                                backgroundImage: `url(${imageUrl})`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                                backgroundClip: 'text',
+                                WebkitBackgroundClip: 'text',
+                                color: 'transparent',
+                                WebkitTextFillColor: 'transparent',
+                                WebkitTextStroke: '2px rgba(255, 255, 255, 0.3)',
+                                textShadow: '0 0 40px rgba(0, 0, 0, 0.5)'
+                            }}
+                        >
                             {name}
                         </h1>
+                    </div>
 
-                        {/* Years Badge */}
-                        {years && (
-                            <div className="inline-flex items-center gap-2 bg-black/40 backdrop-blur-md px-4 sm:px-5 py-2 sm:py-2.5 rounded-full border border-white/30 mb-4 sm:mb-6 shadow-2xl">
-                                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white/90" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                                </svg>
-                                <span className="text-base sm:text-lg md:text-xl font-semibold text-white">{years}</span>
-                            </div>
-                        )}
-
-                        {/* Action Buttons */}
-                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                            {isLoggedIn ? (
-                                <>
-                                    <button
-                                        onClick={handleLikeClick}
-                                        className={`inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3.5 rounded-xl font-bold transition-all shadow-2xl hover:scale-105 min-h-[44px] text-sm sm:text-base backdrop-blur-md ${
-                                            isLiked
-                                                ? "bg-white text-black border-2 border-white"
-                                                : "bg-white/20 text-white border-2 border-white/40 hover:bg-white/30"
-                                        }`}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-5 sm:h-5">
-                                            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
-                                        </svg>
-                                        <span>{isLiked ? "Liked" : "Like"} ({typeof likes === 'number' ? likes : 0})</span>
-                                    </button>
-
-                                    <button
-                                        onClick={handleSaveClick}
-                                        className={`inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3.5 rounded-xl font-bold transition-all shadow-2xl hover:scale-105 min-h-[44px] text-sm sm:text-base backdrop-blur-md ${
-                                            isSaved
-                                                ? "bg-white text-black border-2 border-white"
-                                                : "bg-white/20 text-white border-2 border-white/40 hover:bg-white/30"
-                                        }`}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-5 sm:h-5">
-                                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                                        </svg>
-                                        <span>{isSaved ? "Saved" : "Save"}</span>
-                                    </button>
-                                </>
-                            ) : (
-                                <button
-                                    onClick={onLoginClick}
-                                    className="inline-flex items-center gap-2 px-5 sm:px-7 py-2.5 sm:py-3.5 bg-white text-black rounded-xl font-bold transition-all shadow-2xl hover:scale-105 min-h-[44px] text-sm sm:text-base backdrop-blur-md"
-                                >
-                                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clipRule="evenodd" />
-                                    </svg>
-                                    Sign in to Like and Save
-                                </button>
-                            )}
+                    {/* Years Badge */}
+                    {years && (
+                        <div className="inline-flex items-center gap-2 bg-black/60 backdrop-blur-md px-5 sm:px-6 py-2.5 sm:py-3 rounded-full border border-white/40 mt-6 shadow-2xl">
+                            <svg className="w-5 h-5 text-white/90" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                            </svg>
+                            <span className="text-lg sm:text-xl font-semibold text-white">{years}</span>
                         </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-4 mt-8">
+                        {isLoggedIn ? (
+                            <>
+                                <button
+                                    onClick={handleLikeClick}
+                                    className={`inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold transition-all shadow-2xl hover:scale-105 min-h-[44px] text-sm sm:text-base backdrop-blur-md ${
+                                        isLiked
+                                            ? "bg-white text-black border-2 border-white"
+                                            : "bg-white/20 text-white border-2 border-white/40 hover:bg-white/30"
+                                    }`}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-5 sm:h-5">
+                                        <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                                    </svg>
+                                    <span>{isLiked ? "Liked" : "Like"} ({typeof likes === 'number' ? likes : 0})</span>
+                                </button>
+
+                                <button
+                                    onClick={handleSaveClick}
+                                    className={`inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold transition-all shadow-2xl hover:scale-105 min-h-[44px] text-sm sm:text-base backdrop-blur-md ${
+                                        isSaved
+                                            ? "bg-white text-black border-2 border-white"
+                                            : "bg-white/20 text-white border-2 border-white/40 hover:bg-white/30"
+                                    }`}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-5 sm:h-5">
+                                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                                    </svg>
+                                    <span>{isSaved ? "Saved" : "Save"}</span>
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                onClick={onLoginClick}
+                                className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white text-black rounded-xl font-bold transition-all shadow-2xl hover:scale-105 min-h-[44px] text-sm sm:text-base backdrop-blur-md"
+                            >
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                                Sign in to Like and Save
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
