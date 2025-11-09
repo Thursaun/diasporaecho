@@ -117,7 +117,7 @@ const FigureCard = memo(function FigureCard({
 
   return (
     <div
-      className="card group relative w-full max-w-sm aspect-[1/1.4] rounded-2xl overflow-hidden cursor-pointer transition-all duration-500 hover:shadow-2xl hover:shadow-secondary/20 shadow-xl"
+      className="card group relative w-full max-w-sm aspect-[3/4] sm:aspect-[1/1.4] rounded-xl sm:rounded-2xl overflow-hidden cursor-pointer transition-all duration-500 hover:shadow-2xl hover:shadow-secondary/20 shadow-xl"
       onClick={handleCardClick}
       style={{
         transform: 'translateZ(0)', // Hardware acceleration
@@ -177,9 +177,9 @@ const FigureCard = memo(function FigureCard({
 
       {/* MODERN: Enhanced badge with glass morphism */}
       {displayYears && (
-        <div className="absolute top-4 left-4 z-20">
-          <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-white/95 backdrop-blur-md text-gray-900 shadow-lg border border-white/20 transition-all duration-300 group-hover:scale-105 group-hover:shadow-xl">
-            <svg className="w-3 h-3 text-secondary" fill="currentColor" viewBox="0 0 20 20">
+        <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-20">
+          <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-semibold bg-white/95 backdrop-blur-md text-gray-900 shadow-lg border border-white/20 transition-all duration-300 group-hover:scale-105 group-hover:shadow-xl">
+            <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-secondary" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
             </svg>
             {displayYears}
@@ -188,17 +188,17 @@ const FigureCard = memo(function FigureCard({
       )}
 
       {/* MODERN: Enhanced Content Container */}
-      <div className="content absolute inset-0 flex flex-col p-6 z-10 pt-14">
+      <div className="content absolute inset-0 flex flex-col p-3 sm:p-4 md:p-6 z-10 pt-10 sm:pt-12 md:pt-14">
         {/* MODERN: Enhanced Header Section with gradient backdrop */}
-        <div className="flex flex-col items-start gap-2 mb-4">
-          <h2 className="text-xl font-bold text-white bg-gradient-to-r from-black/60 to-black/40 backdrop-blur-md px-4 py-2.5 rounded-xl shadow-lg line-clamp-2 border border-white/10 transition-all duration-300 group-hover:border-white/20">
+        <div className="flex flex-col items-start gap-1 sm:gap-2 mb-2 sm:mb-3 md:mb-4">
+          <h2 className="text-base sm:text-lg md:text-xl font-bold text-white bg-gradient-to-r from-black/60 to-black/40 backdrop-blur-md px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded-lg sm:rounded-xl shadow-lg line-clamp-2 border border-white/10 transition-all duration-300 group-hover:border-white/20">
             {name}
           </h2>
         </div>
 
         {/* MODERN: Enhanced Description with fade effect */}
-        <div className="flex-1 mb-3 opacity-0 translate-y-6 transition-all duration-600 ease-out group-hover:opacity-100 group-hover:translate-y-0">
-          <p className="text-white/95 text-sm leading-relaxed line-clamp-6 drop-shadow-md">
+        <div className="flex-1 mb-2 sm:mb-3 opacity-0 translate-y-6 transition-all duration-600 ease-out group-hover:opacity-100 group-hover:translate-y-0">
+          <p className="text-white/95 text-xs sm:text-sm leading-relaxed line-clamp-4 sm:line-clamp-5 md:line-clamp-6 drop-shadow-md">
             {description}
           </p>
         </div>
@@ -228,20 +228,20 @@ const FigureCard = memo(function FigureCard({
         )}
 
         {/* MODERN: Enhanced Bottom Actions with glass morphism */}
-        <div className="flex justify-between items-end gap-3 opacity-0 translate-y-6 transition-all duration-600 delay-100 ease-out group-hover:opacity-100 group-hover:translate-y-0">
-          <div className="flex items-center gap-1.5 text-xs text-white/80 bg-black/30 backdrop-blur-md px-3 py-1.5 rounded-lg flex-shrink-0 border border-white/10">
+        <div className="flex justify-between items-end gap-1.5 sm:gap-2 md:gap-3 opacity-0 translate-y-6 transition-all duration-600 delay-100 ease-out group-hover:opacity-100 group-hover:translate-y-0">
+          <div className="hidden sm:flex items-center gap-1.5 text-xs text-white/80 bg-black/30 backdrop-blur-md px-2 sm:px-3 py-1.5 rounded-lg flex-shrink-0 border border-white/10">
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
             </svg>
             <span className="font-medium">{source}</span>
           </div>
 
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-1.5 sm:gap-2 items-center ml-auto sm:ml-0">
             {isLoggedIn ? (
               <>
                 <button
                   onClick={handleLikeClick}
-                  className={`group/btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 shadow-sm hover:shadow-md ${
+                  className={`group/btn inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-all duration-300 shadow-sm hover:shadow-md min-h-[44px] sm:min-h-0 ${
                     isLiked
                       ? "bg-secondary text-white border border-secondary hover:bg-secondary/90"
                       : "bg-white/15 backdrop-blur-md text-white border border-white/20 hover:bg-white/25 hover:border-white/30"
@@ -250,24 +250,25 @@ const FigureCard = memo(function FigureCard({
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="14"
-                    height="14"
+                    width="16"
+                    height="16"
                     viewBox="0 0 24 24"
                     fill={isLiked ? "currentColor" : "none"}
                     stroke="currentColor"
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="transition-transform group-hover/btn:scale-110"
+                    className="transition-transform group-hover/btn:scale-110 sm:w-[14px] sm:h-[14px]"
                   >
                     <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
                   </svg>
-                  <span>{isLiked ? `Liked (${likes})` : `Like (${likes})`}</span>
+                  <span className="hidden xs:inline">{isLiked ? `Liked (${likes})` : `Like (${likes})`}</span>
+                  <span className="xs:hidden">{likes}</span>
                 </button>
 
                 <button
                   onClick={handleSaveClick}
-                  className={`group/btn inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 shadow-sm hover:shadow-md ${
+                  className={`group/btn inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3.5 py-2 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-all duration-300 shadow-sm hover:shadow-md min-h-[44px] sm:min-h-0 ${
                     isSaved
                       ? "bg-white text-gray-900 border border-white hover:bg-white/90"
                       : "bg-white/15 backdrop-blur-md text-white border border-white/20 hover:bg-white/25 hover:border-white/30"
@@ -276,25 +277,25 @@ const FigureCard = memo(function FigureCard({
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width="14"
-                    height="14"
+                    width="16"
+                    height="16"
                     viewBox="0 0 24 24"
                     fill={isSaved ? "currentColor" : "none"}
                     stroke="currentColor"
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="transition-transform group-hover/btn:scale-110"
+                    className="transition-transform group-hover/btn:scale-110 sm:w-[14px] sm:h-[14px]"
                   >
                     <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2-2z"></path>
                   </svg>
-                  <span>{isSaved ? "Saved" : "Save"}</span>
+                  <span className="hidden xs:inline">{isSaved ? "Saved" : "Save"}</span>
                 </button>
               </>
             ) : (
               <button
                 onClick={handleLoginClick}
-                className="group/btn inline-flex items-center gap-1.5 px-4 py-1.5 bg-white/15 backdrop-blur-md text-white rounded-lg border border-white/20 hover:bg-white/25 hover:border-white/30 transition-all duration-300 text-xs font-semibold shadow-sm hover:shadow-md"
+                className="group/btn inline-flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 bg-white/15 backdrop-blur-md text-white rounded-lg border border-white/20 hover:bg-white/25 hover:border-white/30 transition-all duration-300 text-[10px] sm:text-xs font-semibold shadow-sm hover:shadow-md min-h-[44px] sm:min-h-0"
                 aria-label="Sign in to interact with figures"
               >
                 <svg className="w-3.5 h-3.5 transition-transform group-hover/btn:scale-110" fill="currentColor" viewBox="0 0 20 20">

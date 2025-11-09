@@ -221,31 +221,31 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
   // =============================================================================
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-4 sm:py-6 md:py-8">
       {/* Header with performance stats */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold mb-4">Echoes Gallery</h1>
+      <div className="text-center mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-4">Echoes Gallery</h1>
         {!loading && allFigures.length > 0 && (
-          <p className="text-gray-600">
+          <p className="text-sm sm:text-base text-gray-600">
             Explore {allFigures.length} inspiring figures from history.
           </p>
         )}
       </div>
 
       {/* PERFORMANCE: Optimized Category Navigation with scroll optimization */}
-      <div className="mb-8 overflow-x-auto">
+      <div className="mb-6 sm:mb-8 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
         <div className="inline-flex border-b border-gray-300 w-full min-w-max">
           <button
-            className={`px-6 py-3 text-sm font-medium relative whitespace-nowrap transition-colors duration-200 ${
+            className={`px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-xs sm:text-sm font-medium relative whitespace-nowrap transition-colors duration-200 min-h-[44px] flex items-center ${
               activeCategory === "all"
                 ? "text-secondary"
                 : "text-gray-500 hover:text-secondary"
             }`}
             onClick={() => handleCategoryChange("all")}
           >
-            All Figures
+            <span>All Figures</span>
             {!loading && (
-              <span className="ml-2 bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs">
+              <span className="ml-1 sm:ml-2 bg-gray-100 text-gray-600 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs">
                 {categorizedFigures.all?.length || 0}
               </span>
             )}
@@ -257,16 +257,16 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
           {categories.map((category) => (
             <button
               key={category}
-              className={`px-6 py-3 text-sm font-medium relative whitespace-nowrap transition-colors duration-200 ${
+              className={`px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-xs sm:text-sm font-medium relative whitespace-nowrap transition-colors duration-200 min-h-[44px] flex items-center ${
                 activeCategory === category
                   ? "text-secondary"
                   : "text-gray-500 hover:text-secondary"
               }`}
               onClick={() => handleCategoryChange(category)}
             >
-              {category}
+              <span>{category}</span>
               {!loading && (
-                <span className="ml-2 bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs">
+                <span className="ml-1 sm:ml-2 bg-gray-100 text-gray-600 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs">
                   {categorizedFigures[category]?.length || 0}
                 </span>
               )}
@@ -331,17 +331,18 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
       {/* PERFORMANCE: Optimized Figures Grid with key optimization */}
       {!loading && !error && allFigures.length > 0 && (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {currentFigures.map((figure) => (
-              <LazyFigureCard
-                key={`${figure._id || figure.wikipediaId}-${figure.category}`} // Enhanced key for better React optimization
-                figure={figure}
-                onSaveFigureClick={() => onSaveFigureClick(figure)}
-                onLikeFigureClick={handleLikeClick}
-                onLoginClick={onLoginClick}
-                isSaved={isFigureSaved(figure)}
-                isLiked={isFigureLiked(figure)}
-              />
+              <div key={`${figure._id || figure.wikipediaId}-${figure.category}`} className="mx-auto w-full max-w-sm">
+                <LazyFigureCard
+                  figure={figure}
+                  onSaveFigureClick={() => onSaveFigureClick(figure)}
+                  onLikeFigureClick={handleLikeClick}
+                  onLoginClick={onLoginClick}
+                  isSaved={isFigureSaved(figure)}
+                  isLiked={isFigureLiked(figure)}
+                />
+              </div>
             ))}
 
             {/* PERFORMANCE: Show message when category is empty */}
@@ -356,11 +357,11 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
 
           {/* PERFORMANCE: Optimized Load More Button */}
           {hasMoreFigures && (
-            <div className="text-center mt-8">
+            <div className="text-center mt-6 sm:mt-8">
               <button
                 onClick={loadMoreFigures}
                 disabled={loadingMore}
-                className="bg-secondary text-dark px-8 py-3 rounded-lg hover:bg-opacity-80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-md"
+                className="bg-secondary text-dark px-6 sm:px-8 py-3 rounded-lg hover:bg-opacity-80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-md text-sm sm:text-base min-h-[44px]"
               >
                 {loadingMore ? (
                   <span className="flex items-center justify-center">
@@ -369,8 +370,9 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
                   </span>
                 ) : (
                   <>
-                    Load More Figures 
-                    <span className="ml-2 bg-dark bg-opacity-20 px-2 py-1 rounded text-sm">
+                    <span className="hidden sm:inline">Load More Figures</span>
+                    <span className="sm:hidden">Load More</span>
+                    <span className="ml-2 bg-dark bg-opacity-20 px-2 py-1 rounded text-xs sm:text-sm">
                       {(categorizedFigures[activeCategory]?.length || 0) - displayCount} remaining
                     </span>
                   </>

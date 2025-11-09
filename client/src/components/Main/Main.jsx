@@ -191,22 +191,22 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <section className="bg-secondary text-white py-4">
+      <section className="bg-secondary text-white py-4 sm:py-6">
         <div className="container mx-auto px-4 text-center">
           <form
             onSubmit={handleSearch}
-            className="flex flex-col md:flex-row gap-3 max-w-2xl mx-auto"
+            className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto"
           >
             <input
               type="text"
               placeholder="Search for historical figures..."
-              className="flex-grow p-4 rounded-lg text-black text-lg focus:outline-none focus:ring-2 focus:ring-white/30"
+              className="flex-grow p-3 sm:p-4 rounded-lg text-black text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-white/30"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             <button
               type="submit"
-              className="bg-dark text-white px-8 py-4 rounded-lg hover:bg-opacity-90 transition duration-300 font-semibold"
+              className="bg-dark text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg hover:bg-opacity-90 transition duration-300 font-semibold text-base sm:text-lg min-h-[44px]"
               disabled={isLoading}
             >
               {isLoading ? "Searching..." : "Search"}
@@ -215,15 +215,15 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
         </div>
       </section>
 
-      <section className={`bg-white transition-all duration-500 ${searchQuery ? 'py-4' : 'py-16'}`}>
+      <section className={`bg-white transition-all duration-500 ${searchQuery ? 'py-4 sm:py-6' : 'py-8 sm:py-12 lg:py-16'}`}>
         <div className="container mx-auto px-4">
-          <div className={`text-center transition-all duration-500 ${searchQuery ? 'mb-3' : 'mb-12'}`}>
-            <h2 className={`font-bold text-gray-900 transition-all duration-500 ${searchQuery ? 'text-base md:text-lg mb-1' : 'text-3xl md:text-4xl mb-4'}`}>
+          <div className={`text-center transition-all duration-500 ${searchQuery ? 'mb-3 sm:mb-4' : 'mb-6 sm:mb-8 lg:mb-12'}`}>
+            <h2 className={`font-bold text-gray-900 transition-all duration-500 ${searchQuery ? 'text-base sm:text-lg md:text-xl mb-1 sm:mb-2' : 'text-2xl sm:text-3xl md:text-4xl mb-3 sm:mb-4'}`}>
               Featured Figures
             </h2>
-            <div className={`bg-gradient-to-r from-secondary to-primary mx-auto transition-all duration-500 ${searchQuery ? 'w-20 h-px mb-1' : 'w-72 h-1 mb-4'}`}></div>
+            <div className={`bg-gradient-to-r from-secondary to-primary mx-auto transition-all duration-500 ${searchQuery ? 'w-16 sm:w-20 h-px mb-1 sm:mb-2' : 'w-48 sm:w-64 md:w-72 h-1 mb-3 sm:mb-4'}`}></div>
             {!searchQuery && (
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              <p className="text-sm sm:text-base lg:text-lg text-gray-600 max-w-2xl mx-auto px-4">
                 Discover the most celebrated figures whose stories continue to inspire and educate
               </p>
             )}
@@ -236,17 +236,15 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
           ) : (
             <div className={`grid transition-all duration-500 ${
               searchQuery
-                ? 'grid-cols-3 gap-2 scale-50 origin-top -mb-[20%]'
-                : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8'
+                ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4'
+                : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8'
             }`}>
               {topFeaturedFigures.map((figure, index) => (
                 <div
                   key={figure._id}
                   className={`transform transition-all duration-300 ${
                     searchQuery ? '' : 'hover:scale-105'
-                  } ${
-                    !searchQuery && index === 0 ? 'md:col-span-2 lg:col-span-1' : ''
-                  }`}
+                  } mx-auto w-full max-w-sm`}
                 >
                   <div className="relative">
                     {!searchQuery && index < 3 && (
@@ -278,10 +276,10 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
           )}
 
           {!searchQuery && (
-            <div className="text-center mt-12">
+            <div className="text-center mt-8 sm:mt-12">
               <Link
                 to="/echoes"
-                className="inline-flex items-center px-8 py-4 bg-secondary text-white rounded-lg hover:bg-opacity-90 transition duration-300 font-semibold text-lg"
+                className="inline-flex items-center px-6 sm:px-8 py-3 sm:py-4 bg-secondary text-white rounded-lg hover:bg-opacity-90 transition duration-300 font-semibold text-base sm:text-lg min-h-[44px]"
               >
                 Explore All Figures
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2">
@@ -295,13 +293,13 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
       </section>
 
       {searchQuery && (
-        <section className="py-2 bg-gray-50">
+        <section className="py-4 sm:py-6 bg-gray-50">
           <div className="container mx-auto px-4">
-            <div className="mb-4">
-              <h2 className="text-2xl font-bold text-gray-900 mb-1">
+            <div className="mb-4 sm:mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">
                 Search Results
               </h2>
-              <p className="text-sm text-gray-600">
+              <p className="text-xs sm:text-sm text-gray-600">
                 {searchResults.length > 0
                   ? `Found ${searchResults.length} result${searchResults.length !== 1 ? 's' : ''} for "${searchQuery}"`
                   : `Searching for "${searchQuery}"...`
@@ -348,17 +346,18 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
             )}
 
             {searchResults.length > 0 && !isLoading && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                 {searchResults.map((figure) => (
-                  <LazyFigureCard
-                    key={figure.wikipediaId || figure._id || `temp-${Date.now()}`}
-                    figure={figure}
-                    onLikeFigureClick={handleLikeClick}
-                    onSaveFigureClick={onSaveFigureClick}
-                    onLoginClick={onLoginClick}
-                    isSaved={checkIsSaved(figure)}
-                    isLiked={checkIsLiked(figure)}
-                  />
+                  <div key={figure.wikipediaId || figure._id || `temp-${Date.now()}`} className="mx-auto w-full max-w-sm">
+                    <LazyFigureCard
+                      figure={figure}
+                      onLikeFigureClick={handleLikeClick}
+                      onSaveFigureClick={onSaveFigureClick}
+                      onLoginClick={onLoginClick}
+                      isSaved={checkIsSaved(figure)}
+                      isLiked={checkIsLiked(figure)}
+                    />
+                  </div>
                 ))}
               </div>
             )}
