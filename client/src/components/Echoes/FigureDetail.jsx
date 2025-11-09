@@ -178,14 +178,34 @@ function FigureDetail({
     const paragraphs = description.split(/\n+/).filter(p => p.trim());
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-            {/* MODERN: Enhanced Hero Section with Background */}
-            <div className="bg-gradient-to-br from-secondary via-secondary/90 to-dark text-white">
-                <div className="container mx-auto px-4 py-4 sm:py-6">
+        <div className="min-h-screen bg-black">
+            {/* MODERN: Dramatic Hero Section with Figure Image Background */}
+            <div className="relative min-h-[50vh] sm:min-h-[60vh] md:min-h-[70vh] bg-black overflow-hidden">
+                {/* Background Image with Overlay */}
+                <div className="absolute inset-0">
+                    {!imageLoaded && (
+                        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent"></div>
+                        </div>
+                    )}
+                    <img
+                        src={imageUrl}
+                        alt={name}
+                        className={`w-full h-full object-cover transition-opacity duration-1000 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                        onLoad={() => setImageLoaded(true)}
+                    />
+                    {/* Dark gradient overlay for text readability */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black"></div>
+                    {/* Additional gradient for bottom fade */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                </div>
+
+                {/* Content */}
+                <div className="relative z-10 container mx-auto px-4 py-4 sm:py-6 min-h-[50vh] sm:min-h-[60vh] md:min-h-[70vh] flex flex-col">
                     {/* Back Button */}
                     <button
                         onClick={() => navigate(-1)}
-                        className="inline-flex items-center text-white/80 hover:text-white transition-colors group mb-4 sm:mb-6 min-h-[44px] px-2 sm:px-0"
+                        className="inline-flex items-center text-white/90 hover:text-white transition-colors group mb-auto min-h-[44px] px-2 sm:px-0"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 transition-transform group-hover:-translate-x-1">
                             <path d="M15 18l-6-6 6-6" />
@@ -193,15 +213,20 @@ function FigureDetail({
                         <span className="text-sm sm:text-base font-medium">Back</span>
                     </button>
 
-                    {/* Header */}
-                    <div className="pb-6 sm:pb-8">
-                        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 leading-tight">{name}</h1>
+                    {/* Hero Content - Name and Actions */}
+                    <div className="mt-auto pb-6 sm:pb-8 md:pb-12">
+                        {/* Figure Name with dramatic styling */}
+                        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 sm:mb-6 leading-tight text-white drop-shadow-2xl">
+                            {name}
+                        </h1>
+
+                        {/* Years Badge */}
                         {years && (
-                            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 mb-4 sm:mb-6">
-                                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white/80" fill="currentColor" viewBox="0 0 20 20">
+                            <div className="inline-flex items-center gap-2 bg-black/40 backdrop-blur-md px-4 sm:px-5 py-2 sm:py-2.5 rounded-full border border-white/30 mb-4 sm:mb-6 shadow-2xl">
+                                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white/90" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                                 </svg>
-                                <span className="text-base sm:text-xl font-semibold">{years}</span>
+                                <span className="text-base sm:text-lg md:text-xl font-semibold text-white">{years}</span>
                             </div>
                         )}
 
@@ -211,10 +236,10 @@ function FigureDetail({
                                 <>
                                     <button
                                         onClick={handleLikeClick}
-                                        className={`inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl min-h-[44px] text-sm sm:text-base ${
+                                        className={`inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3.5 rounded-xl font-bold transition-all shadow-2xl hover:scale-105 min-h-[44px] text-sm sm:text-base backdrop-blur-md ${
                                             isLiked
-                                                ? "bg-white text-secondary border-2 border-white"
-                                                : "bg-white/10 backdrop-blur-md text-white border-2 border-white/30 hover:bg-white/20"
+                                                ? "bg-white text-black border-2 border-white"
+                                                : "bg-white/20 text-white border-2 border-white/40 hover:bg-white/30"
                                         }`}
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-5 sm:h-5">
@@ -225,10 +250,10 @@ function FigureDetail({
 
                                     <button
                                         onClick={handleSaveClick}
-                                        className={`inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl min-h-[44px] text-sm sm:text-base ${
+                                        className={`inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3.5 rounded-xl font-bold transition-all shadow-2xl hover:scale-105 min-h-[44px] text-sm sm:text-base backdrop-blur-md ${
                                             isSaved
-                                                ? "bg-white text-secondary border-2 border-white"
-                                                : "bg-white/10 backdrop-blur-md text-white border-2 border-white/30 hover:bg-white/20"
+                                                ? "bg-white text-black border-2 border-white"
+                                                : "bg-white/20 text-white border-2 border-white/40 hover:bg-white/30"
                                         }`}
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-5 sm:h-5">
@@ -240,7 +265,7 @@ function FigureDetail({
                             ) : (
                                 <button
                                     onClick={onLoginClick}
-                                    className="inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-white text-secondary rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105 min-h-[44px] text-sm sm:text-base"
+                                    className="inline-flex items-center gap-2 px-5 sm:px-7 py-2.5 sm:py-3.5 bg-white text-black rounded-xl font-bold transition-all shadow-2xl hover:scale-105 min-h-[44px] text-sm sm:text-base backdrop-blur-md"
                                 >
                                     <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
                                         <path fillRule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -254,36 +279,14 @@ function FigureDetail({
             </div>
 
             {/* MODERN: Content Section */}
-            <div className="container mx-auto px-4 py-6 sm:py-8 lg:py-12">
-                <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
-                    {/* MODERN: Sidebar */}
-                    <aside className="lg:w-1/3">
-                        <div className="lg:sticky lg:top-8 space-y-4 sm:space-y-6">
-                            {/* MODERN: Image Card */}
-                            <div className="bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-100 group">
-                                <div className="relative aspect-[3/4] bg-gradient-to-br from-gray-100 to-gray-200">
-                                    {!imageLoaded && (
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <div className="animate-spin rounded-full h-12 w-12 border-4 border-secondary border-t-transparent"></div>
-                                        </div>
-                                    )}
-                                    <img
-                                        src={imageUrl}
-                                        alt={name}
-                                        className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-                                        onLoad={() => setImageLoaded(true)}
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                </div>
-                                <div className="p-4 bg-gradient-to-br from-gray-50 to-white border-t border-gray-100">
-                                    <p className="text-sm text-gray-600 font-medium">
-                                        {name} {years && `(${years})`}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* MODERN: Quick Facts Card */}
-                            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+            <div className="bg-gradient-to-b from-black to-gray-900">
+                <div className="container mx-auto px-4 py-6 sm:py-8 lg:py-12">
+                    <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
+                        {/* MODERN: Sidebar */}
+                        <aside className="lg:w-1/3">
+                            <div className="lg:sticky lg:top-8">
+                                {/* MODERN: Quick Facts Card */}
+                                <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl shadow-2xl border border-gray-700 overflow-hidden">
                                 <div className="bg-gradient-to-r from-secondary to-dark px-6 py-4">
                                     <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
                                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -293,117 +296,117 @@ function FigureDetail({
                                     </h2>
                                 </div>
 
-                                <div className="p-6">
-                                    <dl className="space-y-4">
-                                        {years && (
-                                            <div className="border-b border-gray-100 pb-4">
-                                                <dt className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Years</dt>
-                                                <dd className="text-base font-medium text-gray-900">{years}</dd>
-                                            </div>
-                                        )}
+                                    <div className="p-6">
+                                        <dl className="space-y-4">
+                                            {years && (
+                                                <div className="border-b border-gray-700 pb-4">
+                                                    <dt className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">Years</dt>
+                                                    <dd className="text-base font-medium text-white">{years}</dd>
+                                                </div>
+                                            )}
 
-                                        {tags && tags.length > 0 && (
-                                            <div className="border-b border-gray-100 pb-4">
-                                                <dt className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Categories</dt>
+                                            {tags && tags.length > 0 && (
+                                                <div className="border-b border-gray-700 pb-4">
+                                                    <dt className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">Categories</dt>
+                                                    <dd>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {tags.map((tag, index) => (
+                                                                <span
+                                                                    key={index}
+                                                                    className="inline-flex items-center px-3 py-1 bg-gradient-to-r from-secondary/30 to-dark/30 text-white border border-secondary/40 rounded-full text-xs font-semibold"
+                                                                >
+                                                                    {tag}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </dd>
+                                                </div>
+                                            )}
+
+                                            <div>
+                                                <dt className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">Source</dt>
                                                 <dd>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {tags.map((tag, index) => (
-                                                            <span
-                                                                key={index}
-                                                                className="inline-flex items-center px-3 py-1 bg-gradient-to-r from-secondary/10 to-dark/10 text-secondary border border-secondary/20 rounded-full text-xs font-semibold"
-                                                            >
-                                                                {tag}
-                                                            </span>
-                                                        ))}
-                                                    </div>
+                                                    {sourceUrl ? (
+                                                        <a
+                                                            href={sourceUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center gap-2 text-secondary hover:text-light font-medium transition-colors group"
+                                                        >
+                                                            <span>{source || "View Source"}</span>
+                                                            <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                            </svg>
+                                                        </a>
+                                                    ) : (
+                                                        <span className="text-gray-300">{source || "Unknown"}</span>
+                                                    )}
                                                 </dd>
                                             </div>
-                                        )}
-
-                                        <div>
-                                            <dt className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Source</dt>
-                                            <dd>
-                                                {sourceUrl ? (
-                                                    <a
-                                                        href={sourceUrl}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="inline-flex items-center gap-2 text-secondary hover:text-dark font-medium transition-colors group"
-                                                    >
-                                                        <span>{source || "View Source"}</span>
-                                                        <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                                        </svg>
-                                                    </a>
-                                                ) : (
-                                                    <span className="text-gray-700">{source || "Unknown"}</span>
-                                                )}
-                                            </dd>
-                                        </div>
-                                    </dl>
+                                        </dl>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </aside>
+                        </aside>
 
-                    {/* MODERN: Main Content */}
-                    <main className="lg:w-2/3">
-                        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-                            <div className="p-6 sm:p-8 lg:p-10">
-                                <article className="prose prose-sm sm:prose-base lg:prose-lg max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-secondary prose-strong:text-gray-900">
-                                    <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-bold text-gray-900 mb-6 pb-4 border-b-2 border-secondary/20">
-                                        <svg className="w-6 h-6 sm:w-8 sm:h-8 text-secondary" fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
-                                        </svg>
-                                        Biography
-                                    </h2>
+                        {/* MODERN: Main Content */}
+                        <main className="lg:w-2/3">
+                            <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl shadow-2xl border border-gray-700 overflow-hidden">
+                                <div className="p-6 sm:p-8 lg:p-10">
+                                    <article className="prose prose-sm sm:prose-base lg:prose-lg max-w-none prose-headings:text-white prose-p:text-gray-300 prose-a:text-secondary prose-strong:text-white prose-li:text-gray-300">
+                                        <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-bold text-white mb-6 pb-4 border-b-2 border-secondary/40">
+                                            <svg className="w-6 h-6 sm:w-8 sm:h-8 text-secondary" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
+                                            </svg>
+                                            Biography
+                                        </h2>
 
-                                    {paragraphs.map((paragraph, index) => (
-                                        <p key={index} className="leading-relaxed mb-4">{paragraph}</p>
-                                    ))}
+                                        {paragraphs.map((paragraph, index) => (
+                                            <p key={index} className="leading-relaxed mb-4 text-gray-300">{paragraph}</p>
+                                        ))}
 
-                                    {contributions && contributions.length > 0 && (
-                                        <>
-                                            <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-bold text-gray-900 mt-8 mb-6 pb-4 border-b-2 border-secondary/20">
-                                                <svg className="w-6 h-6 sm:w-8 sm:h-8 text-secondary" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                                </svg>
-                                                Key Contributions
-                                            </h2>
-                                            <ul className="space-y-3">
-                                                {contributions.map((contribution, index) => (
-                                                    <li key={index} className="flex items-start gap-3">
-                                                        <span className="flex-shrink-0 w-6 h-6 bg-secondary/10 text-secondary rounded-full flex items-center justify-center text-xs font-bold mt-1">
-                                                            {index + 1}
-                                                        </span>
-                                                        <span className="flex-1">{contribution}</span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </>
-                                    )}
+                                        {contributions && contributions.length > 0 && (
+                                            <>
+                                                <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-bold text-white mt-8 mb-6 pb-4 border-b-2 border-secondary/40">
+                                                    <svg className="w-6 h-6 sm:w-8 sm:h-8 text-secondary" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                    </svg>
+                                                    Key Contributions
+                                                </h2>
+                                                <ul className="space-y-3">
+                                                    {contributions.map((contribution, index) => (
+                                                        <li key={index} className="flex items-start gap-3 text-gray-300">
+                                                            <span className="flex-shrink-0 w-6 h-6 bg-secondary/30 text-white rounded-full flex items-center justify-center text-xs font-bold mt-1">
+                                                                {index + 1}
+                                                            </span>
+                                                            <span className="flex-1">{contribution}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </>
+                                        )}
 
-                                    <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-bold text-gray-900 mt-8 mb-6 pb-4 border-b-2 border-secondary/20">
-                                        <svg className="w-6 h-6 sm:w-8 sm:h-8 text-secondary" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
-                                        </svg>
-                                        References
-                                    </h2>
-                                    <ol className="list-decimal pl-6 space-y-2">
-                                        <li>
-                                            <a
-                                                href={sourceUrl || "#"}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-secondary hover:text-dark font-medium inline-flex items-center gap-2 group"
-                                            >
-                                                <span>{source || "Primary source"}</span>
-                                                <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                                </svg>
-                                            </a>
-                                        </li>
-                                    </ol>
+                                        <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-bold text-white mt-8 mb-6 pb-4 border-b-2 border-secondary/40">
+                                            <svg className="w-6 h-6 sm:w-8 sm:h-8 text-secondary" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
+                                            </svg>
+                                            References
+                                        </h2>
+                                        <ol className="list-decimal pl-6 space-y-2">
+                                            <li className="text-gray-300">
+                                                <a
+                                                    href={sourceUrl || "#"}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-secondary hover:text-light font-medium inline-flex items-center gap-2 group"
+                                                >
+                                                    <span>{source || "Primary source"}</span>
+                                                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                    </svg>
+                                                </a>
+                                            </li>
+                                        </ol>
                                 </article>
                             </div>
                         </div>
