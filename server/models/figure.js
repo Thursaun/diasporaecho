@@ -95,9 +95,39 @@ const FigureSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+  // Enhanced metadata from Wikidata
+  occupation: {
+    type: [String],
+    default: [],
+  },
+  birthPlace: {
+    type: String,
+    default: null,
+  },
+  deathPlace: {
+    type: String,
+    default: null,
+  },
+  awards: {
+    type: [String],
+    default: [],
+  },
+  education: {
+    type: [String],
+    default: [],
+  },
+  notableWorks: {
+    type: [String],
+    default: [],
+  },
+  movement: {
+    type: [String],
+    default: [],
+  },
 });
 
-FigureSchema.index({ name: 1, imageUrl: 1 }); 
+FigureSchema.index({ name: 1, imageUrl: 1 });
 FigureSchema.index({ name: 'text', description: 'text', category: 'text' });
+FigureSchema.index({ occupation: 1 });
 
 module.exports = mongoose.model("Figure", FigureSchema);

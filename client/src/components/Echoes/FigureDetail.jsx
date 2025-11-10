@@ -170,7 +170,14 @@ function FigureDetail({
         contributions = [],
         source,
         sourceUrl,
-        likes = 0
+        likes = 0,
+        occupation = [],
+        birthPlace,
+        deathPlace,
+        awards = [],
+        education = [],
+        notableWorks = [],
+        movement = []
     } = currentFigure;
 
     console.log("Rendering FigureDetail with likes:", likes, typeof likes);
@@ -317,6 +324,76 @@ function FigureDetail({
                                             </div>
                                         )}
 
+                                        {occupation && occupation.length > 0 && (
+                                            <div className="border-b border-gray-200 pb-4">
+                                                <dt className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-2">
+                                                    <svg className="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
+                                                        <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
+                                                    </svg>
+                                                    Occupation
+                                                </dt>
+                                                <dd>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {occupation.map((occ, index) => (
+                                                            <span
+                                                                key={index}
+                                                                className="inline-flex items-center px-3 py-1 bg-primary/10 text-primary border border-primary/30 rounded-full text-xs font-semibold"
+                                                            >
+                                                                {occ}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </dd>
+                                            </div>
+                                        )}
+
+                                        {(birthPlace || deathPlace) && (
+                                            <div className="border-b border-gray-200 pb-4">
+                                                <dt className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-2">
+                                                    <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                                                    </svg>
+                                                    Location
+                                                </dt>
+                                                <dd className="space-y-1 text-sm">
+                                                    {birthPlace && (
+                                                        <div className="text-gray-900">
+                                                            <span className="font-medium text-gray-600">Born:</span> {birthPlace}
+                                                        </div>
+                                                    )}
+                                                    {deathPlace && (
+                                                        <div className="text-gray-900">
+                                                            <span className="font-medium text-gray-600">Died:</span> {deathPlace}
+                                                        </div>
+                                                    )}
+                                                </dd>
+                                            </div>
+                                        )}
+
+                                        {movement && movement.length > 0 && (
+                                            <div className="border-b border-gray-200 pb-4">
+                                                <dt className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-2">
+                                                    <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+                                                    </svg>
+                                                    Movement
+                                                </dt>
+                                                <dd>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {movement.map((mov, index) => (
+                                                            <span
+                                                                key={index}
+                                                                className="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-700 border border-purple-300 rounded-full text-xs font-semibold"
+                                                            >
+                                                                {mov}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </dd>
+                                            </div>
+                                        )}
+
                                         {tags && tags.length > 0 && (
                                             <div className="border-b border-gray-200 pb-4">
                                                 <dt className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2">Categories</dt>
@@ -392,6 +469,69 @@ function FigureDetail({
                                                             {index + 1}
                                                         </span>
                                                         <span className="flex-1">{contribution}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </>
+                                    )}
+
+                                    {awards && awards.length > 0 && (
+                                        <>
+                                            <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-bold text-gray-900 mt-8 mb-6 pb-4 border-b-2 border-amber-500">
+                                                <svg className="w-6 h-6 sm:w-8 sm:h-8 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                </svg>
+                                                Awards & Honors
+                                            </h2>
+                                            <ul className="space-y-3">
+                                                {awards.map((award, index) => (
+                                                    <li key={index} className="flex items-start gap-3 text-gray-700">
+                                                        <svg className="flex-shrink-0 w-5 h-5 text-amber-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                        </svg>
+                                                        <span className="flex-1">{award}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </>
+                                    )}
+
+                                    {education && education.length > 0 && (
+                                        <>
+                                            <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-bold text-gray-900 mt-8 mb-6 pb-4 border-b-2 border-blue-500">
+                                                <svg className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
+                                                </svg>
+                                                Education
+                                            </h2>
+                                            <ul className="space-y-3">
+                                                {education.map((edu, index) => (
+                                                    <li key={index} className="flex items-start gap-3 text-gray-700">
+                                                        <svg className="flex-shrink-0 w-5 h-5 text-blue-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                        </svg>
+                                                        <span className="flex-1">{edu}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </>
+                                    )}
+
+                                    {notableWorks && notableWorks.length > 0 && (
+                                        <>
+                                            <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-bold text-gray-900 mt-8 mb-6 pb-4 border-b-2 border-green-600">
+                                                <svg className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                                                </svg>
+                                                Notable Works
+                                            </h2>
+                                            <ul className="space-y-3">
+                                                {notableWorks.map((work, index) => (
+                                                    <li key={index} className="flex items-start gap-3 text-gray-700">
+                                                        <svg className="flex-shrink-0 w-5 h-5 text-green-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                        </svg>
+                                                        <span className="flex-1">{work}</span>
                                                     </li>
                                                 ))}
                                             </ul>

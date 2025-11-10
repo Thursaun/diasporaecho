@@ -260,13 +260,14 @@ async function enrichWithWikidata(pages) {
   }
 }
 
-// NEW: Fetch Wikidata batch for precise dates
+// NEW: Fetch Wikidata batch for precise dates and enhanced metadata
 async function fetchWikidataBatch(wikidataIds, pageIdToWikidataId, pages) {
   try {
     const wikidataUrl = `https://www.wikidata.org/w/api.php?${new URLSearchParams({
       action: "wbgetentities",
       ids: wikidataIds.join("|"),
-      props: "claims",
+      props: "claims|labels",
+      languages: "en",
       format: "json",
       origin: "*",
     })}`;
@@ -289,6 +290,15 @@ async function fetchWikidataBatch(wikidataIds, pageIdToWikidataId, pages) {
       const birthYear = extractYearFromWikidataClaim(birthClaim);
       const deathYear = extractYearFromWikidataClaim(deathClaim);
 
+      // Enhanced metadata extraction
+      const occupation = extractWikidataLabels(entity.claims.P106, wikidataResponse); // P106 = occupation
+      const birthPlace = extractWikidataLabel(entity.claims.P19?.[0], wikidataResponse); // P19 = place of birth
+      const deathPlace = extractWikidataLabel(entity.claims.P20?.[0], wikidataResponse); // P20 = place of death
+      const awards = extractWikidataLabels(entity.claims.P166, wikidataResponse).slice(0, 5); // P166 = awards (limit to 5)
+      const education = extractWikidataLabels(entity.claims.P69, wikidataResponse).slice(0, 3); // P69 = educated at
+      const notableWorks = extractWikidataLabels(entity.claims.P800, wikidataResponse).slice(0, 5); // P800 = notable works
+      const movement = extractWikidataLabels(entity.claims.P135, wikidataResponse); // P135 = movement
+
       // Find the corresponding Wikipedia page
       const pageId = Object.keys(pageIdToWikidataId).find(
         id => pageIdToWikidataId[id] === wikidataId
@@ -299,14 +309,61 @@ async function fetchWikidataBatch(wikidataIds, pageIdToWikidataId, pages) {
         pages[pageId].wikidataBirth = birthYear;
         pages[pageId].wikidataDeath = deathYear;
 
+        // Store enhanced metadata
+        pages[pageId].wikidataOccupation = occupation;
+        pages[pageId].wikidataBirthPlace = birthPlace;
+        pages[pageId].wikidataDeathPlace = deathPlace;
+        pages[pageId].wikidataAwards = awards;
+        pages[pageId].wikidataEducation = education;
+        pages[pageId].wikidataNotableWorks = notableWorks;
+        pages[pageId].wikidataMovement = movement;
+
         if (birthYear || deathYear) {
           console.log(`✅ Wikidata: ${pages[pageId].title} - Birth: ${birthYear || 'unknown'}, Death: ${deathYear || 'unknown'}`);
+        }
+        if (occupation.length > 0) {
+          console.log(`   Occupation: ${occupation.join(', ')}`);
+        }
+        if (birthPlace) {
+          console.log(`   Birthplace: ${birthPlace}`);
         }
       }
     }
   } catch (error) {
     console.error("Error fetching Wikidata batch:", error);
   }
+}
+
+// Helper function to extract labels from Wikidata claims (for multiple values)
+function extractWikidataLabels(claims, wikidataResponse) {
+  if (!claims || !Array.isArray(claims)) return [];
+
+  const labels = [];
+  for (const claim of claims.slice(0, 10)) { // Limit to first 10 to avoid too much data
+    const label = extractWikidataLabel(claim, wikidataResponse);
+    if (label) labels.push(label);
+  }
+  return labels;
+}
+
+// Helper function to extract a single label from a Wikidata claim
+function extractWikidataLabel(claim, wikidataResponse) {
+  if (!claim || !claim.mainsnak || !claim.mainsnak.datavalue) return null;
+
+  const value = claim.mainsnak.datavalue.value;
+
+  // If it's an entity reference, try to get the label
+  if (value.id && wikidataResponse.entities && wikidataResponse.entities[value.id]) {
+    const entity = wikidataResponse.entities[value.id];
+    return entity.labels?.en?.value || null;
+  }
+
+  // If it's a string value, return it directly
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  return null;
 }
 
 // NEW: Extract year from Wikidata claim
@@ -404,6 +461,14 @@ function formatWikipediaData(data, searchTerm, peopleOnly = false) {
       sourceUrl: page.fullurl || `https://en.wikipedia.org/?curid=${pageId}`,
       likes: 0,
       likedBy: [],
+      // Enhanced metadata from Wikidata
+      occupation: page.wikidataOccupation || [],
+      birthPlace: page.wikidataBirthPlace || null,
+      deathPlace: page.wikidataDeathPlace || null,
+      awards: page.wikidataAwards || [],
+      education: page.wikidataEducation || [],
+      notableWorks: page.wikidataNotableWorks || [],
+      movement: page.wikidataMovement || [],
     });
   }
 
