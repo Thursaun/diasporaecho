@@ -27,11 +27,27 @@ const searchController = async (req, res) => {
 
     console.log(`Found ${dbResults.length} results in database`);
 
-    // Step 2: Always search Wikipedia for better coverage
+    // Step 2: Only search Wikipedia if no database results found
+    if (dbResults.length > 0) {
+      // Sort database results to prioritize exact matches
+      const sortedResults = dbResults.sort((a, b) => {
+        const aNameMatch = a.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const bNameMatch = b.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+        if (aNameMatch && !bNameMatch) return -1;
+        if (!aNameMatch && bNameMatch) return 1;
+        return 0;
+      });
+
+      return res.json(sortedResults.slice(0, 15));
+    }
+
+    // No database results - search Wikipedia
+    console.log("No database results, searching Wikipedia...");
     const wikiResults = await searchFigures({ searchTerm });
     console.log(`Found ${wikiResults.length} results from Wikipedia`);
 
-    // Step 3: Filter and combine results
+    // Filter Wikipedia results
     const uniqueWikiResults = await Promise.all(
       wikiResults.map(async (figure) => {
         if (!figure.imageUrl || figure.imageUrl.includes("placeholder")) {
@@ -42,26 +58,18 @@ const searchController = async (req, res) => {
         if (isDuplicate) {
           return null;
         }
-        
+
         return figure;
       })
     );
 
     const validWikiResults = uniqueWikiResults.filter(Boolean);
 
-    // Combine and prioritize exact name matches
-    const combinedResults = [...dbResults];
-    validWikiResults.forEach((wikiResult) => {
-      if (!combinedResults.some((fig) => fig.name.toLowerCase() === wikiResult.name.toLowerCase())) {
-        combinedResults.push(wikiResult);
-      }
-    });
-
-    // Sort results to prioritize exact matches
-    const sortedResults = combinedResults.sort((a, b) => {
+    // Sort Wikipedia results to prioritize exact matches
+    const sortedResults = validWikiResults.sort((a, b) => {
       const aNameMatch = a.name.toLowerCase().includes(searchTerm.toLowerCase());
       const bNameMatch = b.name.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       if (aNameMatch && !bNameMatch) return -1;
       if (!aNameMatch && bNameMatch) return 1;
       return 0;
