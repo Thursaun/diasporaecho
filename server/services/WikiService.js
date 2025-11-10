@@ -65,8 +65,25 @@ const searchController = async (req, res) => {
 
     const validWikiResults = uniqueWikiResults.filter(Boolean);
 
-    // Sort Wikipedia results to prioritize exact matches
-    const sortedResults = validWikiResults.sort((a, b) => {
+    // Save Wikipedia results to database
+    const savedFigures = await Promise.all(
+      validWikiResults.map(async (figureData) => {
+        try {
+          // Create new figure in database
+          const newFigure = new Figure(figureData);
+          await newFigure.save();
+          console.log(`✅ Saved to database: ${newFigure.name}`);
+          return newFigure;
+        } catch (error) {
+          console.error(`❌ Error saving ${figureData.name}:`, error.message);
+          // Return the original data if save fails
+          return figureData;
+        }
+      })
+    );
+
+    // Sort saved results to prioritize exact matches
+    const sortedResults = savedFigures.sort((a, b) => {
       const aNameMatch = a.name.toLowerCase().includes(searchTerm.toLowerCase());
       const bNameMatch = b.name.toLowerCase().includes(searchTerm.toLowerCase());
 
