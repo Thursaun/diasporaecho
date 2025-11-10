@@ -48,7 +48,6 @@ const FigureCard = memo(function FigureCard({
     likes = 0,
     source,
     occupation = [],
-    birthPlace,
   } = figure;
 
   // =============================================================================
@@ -194,14 +193,6 @@ const FigureCard = memo(function FigureCard({
               <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
             </svg>
             {occupation[0]}
-          </span>
-        )}
-        {birthPlace && (
-          <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-semibold bg-blue-500/95 backdrop-blur-md text-white shadow-lg border border-white/20 transition-all duration-300 group-hover:scale-105 group-hover:shadow-xl">
-            <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-            </svg>
-            {birthPlace}
           </span>
         )}
       </div>
