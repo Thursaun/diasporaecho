@@ -126,42 +126,84 @@ async function trySearchStrategies(searchQueries, limit, originalTerm) {
   for (const query of searchQueries) {
     try {
       console.log("Trying search:", query);
-      
-      const searchQueryParams = new URLSearchParams({
-        action: "query",
+
+      // IMPROVED: Use both search methods for better coverage
+      // Method 1: Try opensearch first (better for names)
+      const opensearchParams = new URLSearchParams({
+        action: "opensearch",
         format: "json",
-        list: "search",
-        srsearch: query,
-        srlimit: limit,
+        search: query,
+        limit: limit,
+        namespace: "0", // Main namespace only
         origin: "*",
       });
 
-      const searchUrl = `${API_BASE_URL}?${searchQueryParams.toString()}`;
-      const response = await fetch(searchUrl);
-      
-      if (!response.ok) continue;
-      
-      const data = await response.json();
-      
-      if (!data.query || !data.query.search || data.query.search.length === 0) {
-        continue; // Try next strategy
+      const opensearchUrl = `${API_BASE_URL}?${opensearchParams.toString()}`;
+      const opensearchResponse = await fetch(opensearchUrl);
+
+      let pageIds = [];
+
+      if (opensearchResponse.ok) {
+        const opensearchData = await opensearchResponse.json();
+        // OpenSearch returns: [query, [titles...], [descriptions...], [urls...]]
+        if (opensearchData && opensearchData[1] && opensearchData[1].length > 0) {
+          console.log(`OpenSearch found ${opensearchData[1].length} results:`, opensearchData[1]);
+
+          // Convert titles to page IDs
+          const titlesParam = opensearchData[1].join("|");
+          const titlesToIdsParams = new URLSearchParams({
+            action: "query",
+            format: "json",
+            titles: titlesParam,
+            origin: "*",
+          });
+
+          const titlesToIdsUrl = `${API_BASE_URL}?${titlesToIdsParams.toString()}`;
+          const titlesToIdsResponse = await fetch(titlesToIdsUrl);
+
+          if (titlesToIdsResponse.ok) {
+            const titlesToIdsData = await titlesToIdsResponse.json();
+            if (titlesToIdsData.query && titlesToIdsData.query.pages) {
+              pageIds = Object.keys(titlesToIdsData.query.pages).filter(id => id !== "-1");
+            }
+          }
+        }
       }
 
-      console.log(`Found ${data.query.search.length} results for "${query}"`);
+      // Method 2: Fallback to regular search if opensearch didn't work well
+      if (pageIds.length === 0) {
+        const searchQueryParams = new URLSearchParams({
+          action: "query",
+          format: "json",
+          list: "search",
+          srsearch: query,
+          srlimit: limit,
+          origin: "*",
+        });
 
-      // Check if we found a good match (name similarity)
-      const hasGoodMatch = data.query.search.some(result => {
-        const similarity = calculateNameSimilarity(result.title, originalTerm);
-        return similarity > 0.7; // 70% similarity threshold
-      });
+        const searchUrl = `${API_BASE_URL}?${searchQueryParams.toString()}`;
+        const response = await fetch(searchUrl);
 
-      if (hasGoodMatch || data.query.search.length >= 3) {
-        const pageIds = data.query.search.map((item) => item.pageid).join("|");
-        const detailedData = await getPageDetails(pageIds, originalTerm, false);
-        
+        if (!response.ok) continue;
+
+        const data = await response.json();
+
+        if (!data.query || !data.query.search || data.query.search.length === 0) {
+          continue; // Try next strategy
+        }
+
+        console.log(`Regular search found ${data.query.search.length} results for "${query}"`);
+        pageIds = data.query.search.map((item) => item.pageid);
+      }
+
+      if (pageIds.length > 0) {
+        const pageIdsStr = pageIds.join("|");
+        const detailedData = await getPageDetails(pageIdsStr, originalTerm, false);
+
         if (detailedData) {
           const figures = formatWikipediaData(detailedData, originalTerm, true);
           if (figures.length > 0) {
+            console.log(`✅ Successfully found ${figures.length} figures`);
             return figures;
           }
         }
@@ -171,7 +213,7 @@ async function trySearchStrategies(searchQueries, limit, originalTerm) {
       continue;
     }
   }
-  
+
   return []; // No strategies worked
 }
 
