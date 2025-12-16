@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
 import FigureCard from "../Echoes/FigureCard";
 import LazyFigureCard from "../Echoes/LazyFigureCard";
 import { searchFigures, getFeaturedFigures } from "../../utils/api";
-import { fuzzySearchFilter } from "../../utils/fuzzySearch";
 
 function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick, currentUser }) {
   const [searchResults, setSearchResults] = useState([]);
@@ -16,17 +15,24 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
   // Debounce timer ref
   const debounceTimerRef = useRef(null);
 
-  // PERFORMANCE: Memoized saved check function
-  const checkIsSaved = useCallback((figure) => {
-    if (!figure || !savedFigures) return false;
+  // PERFORMANCE: Convert savedFigures array to Map for O(1) lookup instead of O(n)
+  const savedFiguresMap = useMemo(() => {
+    if (!savedFigures || !Array.isArray(savedFigures)) return new Map();
 
-    const figureId = figure.wikipediaId || figure._id;
-
-    return savedFigures.some((savedFigure) => {
-      const savedId = savedFigure.wikipediaId || savedFigure._id;
-      return savedId === figureId;
+    const map = new Map();
+    savedFigures.forEach((figure) => {
+      const id = figure.wikipediaId || figure._id;
+      if (id) map.set(id, true);
     });
+    return map;
   }, [savedFigures]);
+
+  // PERFORMANCE: Optimized saved check function using Map lookup O(1)
+  const checkIsSaved = useCallback((figure) => {
+    if (!figure) return false;
+    const figureId = figure.wikipediaId || figure._id;
+    return savedFiguresMap.has(figureId);
+  }, [savedFiguresMap]);
 
   // PERFORMANCE: Memoized liked check function
   const checkIsLiked = useCallback((figure) => {
@@ -114,9 +120,9 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
     }
   }, [onLikeFigureClick]);
 
-  // PERFORMANCE: Featured figures already sorted by server (by featuredRank)
-  // No need to sort or slice - server returns exactly 3 figures in correct order
-  const topFeaturedFigures = featuredFigures;
+  // PERFORMANCE: Memoize featured figures to prevent unnecessary re-renders
+  // Server returns exactly 3 figures pre-sorted by featuredRank
+  const topFeaturedFigures = useMemo(() => featuredFigures, [featuredFigures]);
 
   // PERFORMANCE: Load featured figures (pre-selected daily, cached on server)
   useEffect(() => {
@@ -126,6 +132,16 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
         console.log('✅ Featured figures loaded:', figures.length);
         setFeaturedFigures(figures);
         setFeaturedLoading(false);
+
+        // PERFORMANCE: Preload featured images for instant display
+        figures.slice(0, 3).forEach((figure, index) => {
+          const link = document.createElement('link');
+          link.rel = 'preload';
+          link.as = 'image';
+          link.href = figure.imageUrl;
+          link.fetchPriority = index === 0 ? 'high' : 'low';
+          document.head.appendChild(link);
+        });
       })
       .catch((err) => {
         console.error("❌ Error fetching featured figures:", err);
@@ -146,9 +162,8 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
     searchFigures({ query })
       .then((results) => {
         console.log("Search results:", results);
-        // PERFORMANCE: Apply fuzzy search filter for better matching
-        const fuzzyFiltered = fuzzySearchFilter(results, query);
-        setSearchResults(fuzzyFiltered);
+        // Wikipedia backend already handles all filtering and ranking
+        setSearchResults(results);
         setIsLoading(false);
       })
       .catch((err) => {

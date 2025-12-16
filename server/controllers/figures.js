@@ -225,6 +225,14 @@ const getFeaturedFigures = async (req, res, next) => {
   try {
     // Smart get: Returns cached featured figures or refreshes if >24h old
     const featuredFigures = await FeaturedFiguresService.getOrRefreshFeatured();
+
+    // PERFORMANCE: Add HTTP cache headers for browser caching (24 hours)
+    res.set({
+      'Cache-Control': 'public, max-age=86400, stale-while-revalidate=3600', // 24h cache, 1h stale
+      'ETag': `"featured-${featuredFigures[0]?.featuredSince || Date.now()}"`,
+      'Vary': 'Accept-Encoding'
+    });
+
     res.status(200).json(featuredFigures);
   } catch (error) {
     console.error('Error getting featured figures:', error);
@@ -232,30 +240,145 @@ const getFeaturedFigures = async (req, res, next) => {
   }
 };
 
-const searchFigures = (req, res, next) => {
+// WIKIPEDIA-STYLE SEARCH: Fuzzy matching with intelligent ranking
+const searchFigures = async (req, res, next) => {
   const { query } = req.query;
-  
+
   if (!query) {
     return res.status(400).json({ message: 'Search query is required' });
   }
 
-  const searchRegex = new RegExp(query, 'i');
-  
-  Figure.find({
-    $or: [
-      { name: searchRegex },
-      { description: searchRegex },
-      { category: searchRegex },
-      { tags: { $in: [searchRegex] } }
-    ]
-  })
-    .select('-owners') // Exclude owners field (likedBy is included by default)
-    .then(figures => {
-      res.status(200).json(figures);
-    })
-    .catch(error => {
-      next(error);
+  try {
+    const searchTerm = query.trim().toLowerCase();
+    const searchWords = searchTerm.split(/\s+/);
+
+    // PERFORMANCE: Use MongoDB text search first for speed
+    const textSearchResults = await Figure.find(
+      { $text: { $search: query } },
+      { score: { $meta: "textScore" } }
+    )
+      .select('-owners')
+      .sort({ score: { $meta: "textScore" } })
+      .lean()
+      .limit(50);
+
+    // Build flexible search patterns like Wikipedia for supplemental results
+    const searchPatterns = [];
+
+    // 1. Exact phrase match (highest priority)
+    searchPatterns.push({ name: { $regex: `^${query}$`, $options: 'i' } });
+
+    // 2. Starts with query (very high priority)
+    searchPatterns.push({ name: { $regex: `^${query}`, $options: 'i' } });
+
+    // 3. Contains exact phrase
+    searchPatterns.push({ name: { $regex: query, $options: 'i' } });
+
+    // 4. Flexible word order - all words present
+    if (searchWords.length > 1) {
+      const flexiblePattern = searchWords.map(word => `(?=.*${word})`).join('');
+      searchPatterns.push({ name: { $regex: flexiblePattern, $options: 'i' } });
+    }
+
+    // 5. Any word matches (partial match)
+    searchWords.forEach(word => {
+      if (word.length >= 2) {
+        searchPatterns.push({ name: { $regex: word, $options: 'i' } });
+      }
     });
+
+    // 6. Search in occupation, category, tags
+    searchPatterns.push({ occupation: { $in: [new RegExp(query, 'i')] } });
+    searchPatterns.push({ category: { $regex: query, $options: 'i' } });
+    searchPatterns.push({ tags: { $in: [new RegExp(query, 'i')] } });
+    searchPatterns.push({ years: { $regex: query, $options: 'i' } });
+
+    // Get supplemental regex results
+    const regexResults = await Figure.find({
+      $or: searchPatterns
+    })
+      .select('-owners')
+      .lean()
+      .limit(50);
+
+    // Combine and deduplicate results
+    const allResults = [...textSearchResults, ...regexResults];
+    const uniqueResults = Array.from(
+      new Map(allResults.map(fig => [fig._id.toString(), fig])).values()
+    );
+
+    // WIKIPEDIA-STYLE RANKING: Sort by relevance
+    const rankedFigures = uniqueResults.map(figure => {
+      let score = 0;
+      const nameLower = figure.name.toLowerCase();
+      const descLower = (figure.description || '').toLowerCase();
+
+      // Exact match = highest score
+      if (nameLower === searchTerm) {
+        score += 1000;
+      }
+      // Starts with query = very high score
+      else if (nameLower.startsWith(searchTerm)) {
+        score += 500;
+      }
+      // Contains exact phrase = high score
+      else if (nameLower.includes(searchTerm)) {
+        score += 250;
+      }
+      // All words present = good score
+      else if (searchWords.every(word => nameLower.includes(word))) {
+        score += 100;
+      }
+      // Some words present = lower score
+      else {
+        const matchCount = searchWords.filter(word => nameLower.includes(word)).length;
+        score += matchCount * 30;
+      }
+
+      // Boost if query appears in first 200 chars of description
+      if (descLower.substring(0, 200).includes(searchTerm)) {
+        score += 75;
+      }
+
+      // Boost score if occupation matches
+      if (figure.occupation && figure.occupation.some(occ =>
+        occ.toLowerCase().includes(searchTerm))) {
+        score += 50;
+      }
+
+      // Boost if category matches
+      if (figure.category && figure.category.toLowerCase().includes(searchTerm)) {
+        score += 40;
+      }
+
+      // Boost if tags match
+      if (figure.tags && figure.tags.some(tag =>
+        tag.toLowerCase().includes(searchTerm))) {
+        score += 35;
+      }
+
+      // Boost by popularity (likes) - Wikipedia prioritizes popular pages
+      score += Math.min(figure.likes || 0, 50); // Cap at 50 points
+
+      // Boost if from MongoDB text search (already relevant)
+      if (figure.score) {
+        score += figure.score * 10;
+      }
+
+      return { ...figure, _searchScore: score };
+    });
+
+    // Sort by score (descending)
+    const sortedFigures = rankedFigures
+      .sort((a, b) => b._searchScore - a._searchScore)
+      .map(({ _searchScore, score, ...figure }) => figure); // Remove search scores
+
+    console.log(`🔍 Search "${query}": Found ${sortedFigures.length} results`);
+    res.status(200).json(sortedFigures);
+  } catch (error) {
+    console.error('Search error:', error);
+    next(error);
+  }
 };
 
 module.exports = {

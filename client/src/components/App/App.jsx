@@ -1,12 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import Header from "../Header/Header";
 import Login from "../ModalWithForms/Login";
 import Register from "../ModalWithForms/Register";
-import Main from "../Main/Main";
-import Echoes from "../Echoes/Echoes";
-import Profile from "../ProtectedRoute/Profile";
-import FigureDetail from "../Echoes/FigureDetail";
+import Loading from "../Loading/Loading";
+
+const Main = lazy(() => import("../Main/Main"));
+const Echoes = lazy(() => import("../Echoes/Echoes"));
+const Profile = lazy(() => import("../ProtectedRoute/Profile"));
+const FigureDetail = lazy(() => import("../Echoes/FigureDetail"));
+const AboutUs = lazy(() => import("../About/About"));
+
 import CurrentUserContext from "../../contexts/CurrentUserContext";
 import { checkToken, login, register } from "../../utils/auth";
 import {
@@ -16,7 +20,6 @@ import {
   likeFigure,
 } from "../../utils/api";
 import ModalWithForm from "../ModalWithForms/ModalWithForm";
-import AboutUs from "../About/About";
 
 const App = () => {
   const navigate = useNavigate();
@@ -273,62 +276,64 @@ const App = () => {
           onRegisterClick={() => openModal("register")}
           onSignOut={handleSignout}
         />
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <Main
-                figures={figures}
-                selectedFigure={selectedFigure}
-                savedFigures={savedFigures}
-                onSaveFigureClick={handleSaveFigureClick}
-                onLikeFigureClick={handleLikeFigureClick}
-                onLoginClick={() => openModal("login")}
-                currentUser={currentUser}
-              />
-            }
-          />
-          <Route
-            path="/echoes"
-            element={
-              <Echoes
-                savedFigures={savedFigures}
-                onSaveFigureClick={handleSaveFigureClick}
-                onLikeFigureClick={handleLikeFigureClick}
-                onLoginClick={() => openModal("login")}
-                currentUser={currentUser}
-              />
-            }
-          />
-          <Route
-            path="/figures/:id"
-            element={
-              <FigureDetail
-                onSaveFigureClick={handleSaveFigureClick}
-                onLikeFigureClick={handleLikeFigureClick}
-                onLoginClick={() => openModal("login")}
-                savedFigures={savedFigures}
-                selectedFigure={selectedFigure}
-                setSelectedFigure={setSelectedFigure}
-              />
-            }
-          />
-          <Route
-            path="/about"
-            element={<AboutUs onRegisterClick={() => openModal("register")} />}
-          />
-          <Route
-            path="/profile"
-            element={
-              <Profile
-                savedFigures={savedFigures}
-                onLikeFigureClick={handleLikeFigureClick}
-                onSaveFigureClick={handleSaveFigureClick}
-                onLoginClick={() => openModal("login")}
-              />
-            }
-          />
-        </Routes>
+        <Suspense fallback={<Loading />}>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <Main
+                  figures={figures}
+                  selectedFigure={selectedFigure}
+                  savedFigures={savedFigures}
+                  onSaveFigureClick={handleSaveFigureClick}
+                  onLikeFigureClick={handleLikeFigureClick}
+                  onLoginClick={() => openModal("login")}
+                  currentUser={currentUser}
+                />
+              }
+            />
+            <Route
+              path="/echoes"
+              element={
+                <Echoes
+                  savedFigures={savedFigures}
+                  onSaveFigureClick={handleSaveFigureClick}
+                  onLikeFigureClick={handleLikeFigureClick}
+                  onLoginClick={() => openModal("login")}
+                  currentUser={currentUser}
+                />
+              }
+            />
+            <Route
+              path="/figures/:id"
+              element={
+                <FigureDetail
+                  onSaveFigureClick={handleSaveFigureClick}
+                  onLikeFigureClick={handleLikeFigureClick}
+                  onLoginClick={() => openModal("login")}
+                  savedFigures={savedFigures}
+                  selectedFigure={selectedFigure}
+                  setSelectedFigure={setSelectedFigure}
+                />
+              }
+            />
+            <Route
+              path="/about"
+              element={<AboutUs onRegisterClick={() => openModal("register")} />}
+            />
+            <Route
+              path="/profile"
+              element={
+                <Profile
+                  savedFigures={savedFigures}
+                  onLikeFigureClick={handleLikeFigureClick}
+                  onSaveFigureClick={handleSaveFigureClick}
+                  onLoginClick={() => openModal("login")}
+                />
+              }
+            />
+          </Routes>
+        </Suspense>
 
         <Login
           isOpen={activeModal === "login"}

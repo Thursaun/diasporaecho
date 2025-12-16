@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const helmet = require('helmet');
 const cors = require('cors');
+const compression = require('compression'); // Import compression
 const { errors } = require('celebrate');
 const { requestLogger, errorLogger } = require('./middlewares/logger');
 const limiter = require('./middlewares/rateLimiter');
@@ -15,6 +16,7 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
+app.use(compression()); // Use compression
 app.use(helmet());
 app.use(cors({
   origin: [

@@ -15,75 +15,43 @@ const searchController = async (req, res) => {
 
     console.log("Searching for:", searchTerm);
 
-    // Step 1: Search database first with enhanced name matching
-    const dbResults = await Figure.find({
-      $or: [
-        { name: { $regex: searchTerm, $options: "i" } },
-        { name: { $regex: searchTerm.replace(/\s+/g, ".*"), $options: "i" } }, // Flexible name matching
-        { description: { $regex: searchTerm, $options: "i" } },
-        { tags: { $in: [new RegExp(searchTerm, "i")] } },
-      ],
-    }).limit(10);
-
-    console.log(`Found ${dbResults.length} results in database`);
-
-    // Step 2: Only search Wikipedia if no database results found
-    if (dbResults.length > 0) {
-      // Sort database results to prioritize exact matches
-      const sortedResults = dbResults.sort((a, b) => {
-        const aNameMatch = a.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const bNameMatch = b.name.toLowerCase().includes(searchTerm.toLowerCase());
-
-        if (aNameMatch && !bNameMatch) return -1;
-        if (!aNameMatch && bNameMatch) return 1;
-        return 0;
-      });
-
-      return res.json(sortedResults.slice(0, 15));
-    }
-
-    // No database results - search Wikipedia
-    console.log("No database results, searching Wikipedia...");
+    // Step 1: Search Wikipedia only - no database search
+    console.log("🔍 Searching Wikipedia...");
     const wikiResults = await searchFigures({ searchTerm });
     console.log(`Found ${wikiResults.length} results from Wikipedia`);
 
-    // Filter Wikipedia results
-    const uniqueWikiResults = await Promise.all(
-      wikiResults.map(async (figure) => {
-        if (!figure.imageUrl || figure.imageUrl.includes("placeholder")) {
+    // Step 2: For each Wikipedia result, check if it exists in database
+    // If it exists, swap with the database version (preserves likes/saves)
+    const processedResults = await Promise.all(
+      wikiResults.map(async (wikiPerson) => {
+        if (!wikiPerson.imageUrl || wikiPerson.imageUrl.includes("placeholder")) {
           return null;
         }
 
-        const isDuplicate = await checkDupes(figure);
-        if (isDuplicate) {
-          return null;
+        // Check if this person exists in database by name or wikipediaId
+        const dbMatch = await Figure.findOne({
+          $or: [
+            { wikipediaId: wikiPerson.wikipediaId },
+            { name: { $regex: `^${wikiPerson.name}$`, $options: "i" } }
+          ]
+        });
+
+        if (dbMatch) {
+          // Return database version instead of Wikipedia version
+          // This preserves all the like/save relationships
+          console.log(`🔄 Swapping Wikipedia result with DB version: ${dbMatch.name}`);
+          return dbMatch.toObject();
         }
 
-        return figure;
+        // Return Wikipedia result as-is (user can save it later if they want)
+        return wikiPerson;
       })
     );
 
-    const validWikiResults = uniqueWikiResults.filter(Boolean);
+    const validResults = processedResults.filter(Boolean);
 
-    // Save Wikipedia results to database
-    const savedFigures = await Promise.all(
-      validWikiResults.map(async (figureData) => {
-        try {
-          // Create new figure in database
-          const newFigure = new Figure(figureData);
-          await newFigure.save();
-          console.log(`✅ Saved to database: ${newFigure.name}`);
-          return newFigure;
-        } catch (error) {
-          console.error(`❌ Error saving ${figureData.name}:`, error.message);
-          // Return the original data if save fails
-          return figureData;
-        }
-      })
-    );
-
-    // Sort saved results to prioritize exact matches
-    const sortedResults = savedFigures.sort((a, b) => {
+    // Sort by relevance to search query
+    const sortedResults = validResults.sort((a, b) => {
       const aNameMatch = a.name.toLowerCase().includes(searchTerm.toLowerCase());
       const bNameMatch = b.name.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -92,6 +60,7 @@ const searchController = async (req, res) => {
       return 0;
     });
 
+    console.log(`📊 Returning ${sortedResults.length} Wikipedia results (some swapped with DB versions)`);
     res.json(sortedResults.slice(0, 15));
   } catch (error) {
     console.error("Search error:", error);
@@ -632,7 +601,7 @@ function extractYearsFromText(text) {
 
     // NEW 9. Year range at start without "born": Name (1822–1913) was a...
     {
-      regex: /^\s*[A-Z][^(]*\((\d{4})[-–—](\d{4})\)\s+(?:was|is)/,
+      regex: /^\s*[A-Z][^(]*\((\d{4})[-–—](\d{4})\)\s+(?:was|is)/gi,
       type: 'birth-death',
       priority: 9
     },

@@ -7,7 +7,14 @@ import { BASE_URL } from "./constants";
 // Simple in-memory cache for API responses
 // Reduces redundant network requests and improves loading times
 const cache = new Map();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache duration
+
+// PERFORMANCE: Different cache durations for different data types
+const CACHE_DURATIONS = {
+  FEATURED: 24 * 60 * 60 * 1000, // 24 hours (featured figures rotate daily)
+  REGULAR: 5 * 60 * 1000,         // 5 minutes (general data)
+  USER_DATA: 60 * 1000,           // 1 minute (user-specific data)
+  SEARCH: 10 * 60 * 1000          // 10 minutes (search results)
+};
 
 // Performance monitoring utilities
 const performanceTracker = {
@@ -40,16 +47,17 @@ const performanceTracker = {
  * Enhanced fetch function with caching and performance monitoring
  * @param {string} url - The URL to fetch
  * @param {object} options - Fetch options
- * @param {boolean} useCache - Whether to use caching (default: true)
+ * @param {string} cacheType - Cache duration type: 'FEATURED', 'REGULAR', 'USER_DATA', 'SEARCH'
  * @returns {Promise} - Fetch promise with cached response
  */
-const cachedFetch = async (url, options = {}, useCache = true) => {
+const cachedFetch = async (url, options = {}, cacheType = 'REGULAR') => {
   const cacheKey = `${url}_${JSON.stringify(options)}`;
-  
+  const cacheDuration = CACHE_DURATIONS[cacheType] || CACHE_DURATIONS.REGULAR;
+
   // PERFORMANCE: Check cache first to avoid network requests
-  if (useCache) {
+  if (cacheType !== 'NONE') {
     const cached = cache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    if (cached && Date.now() - cached.timestamp < cacheDuration) {
       console.log('🔄 Cache hit for:', url.split('/').pop());
       return cached.data;
     }
@@ -75,14 +83,19 @@ const cachedFetch = async (url, options = {}, useCache = true) => {
     }
 
     const data = await response.json();
-    
-    // PERFORMANCE: Cache successful responses
-    if (useCache) {
-      cache.set(cacheKey, {
-        data,
-        timestamp: Date.now(),
-      });
-      console.log('💾 Cached response for:', url.split('/').pop());
+
+    // PERFORMANCE: Cache successful responses (but not empty arrays for searches)
+    if (cacheType !== 'NONE') {
+      const shouldCache = !(cacheType === 'SEARCH' && Array.isArray(data) && data.length === 0);
+      if (shouldCache) {
+        cache.set(cacheKey, {
+          data,
+          timestamp: Date.now(),
+        });
+        console.log(`💾 Cached response for: ${url.split('/').pop()} (${cacheType})`);
+      } else {
+        console.log(`⏭️  Skipping cache for empty search result: ${url.split('/').pop()}`);
+      }
     }
 
     performanceTracker.end(requestLabel);
@@ -104,20 +117,21 @@ const cachedFetch = async (url, options = {}, useCache = true) => {
  * @param {object} options - Fetch options
  * @param {number} timeout - Timeout in milliseconds (default: 30000)
  * @param {number} retries - Number of retries (default: 2)
+ * @param {string} cacheType - Cache duration type
  * @returns {Promise} - Fetch promise with timeout and retry
  */
-const fetchWithTimeout = async (url, options = {}, timeout = 30000, retries = 2) => {
+const fetchWithTimeout = async (url, options = {}, timeout = 30000, retries = 2, cacheType = 'REGULAR') => {
   for (let attempt = 1; attempt <= retries + 1; attempt++) {
     try {
       // PERFORMANCE: Add timeout to prevent hanging requests
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
-      
+
       const response = await cachedFetch(url, {
         ...options,
         signal: controller.signal,
-      });
-      
+      }, cacheType);
+
       clearTimeout(timeoutId);
       return response;
       
@@ -206,9 +220,16 @@ const getFigures = async () => {
 const getFeaturedFigures = async () => {
   try {
     performanceTracker.start('getFeaturedFigures');
-    
-    const data = await fetchWithTimeout(`${BASE_URL}/figures/featured`);
-    
+
+    // PERFORMANCE: Use 24-hour cache for featured figures (they rotate daily)
+    const data = await fetchWithTimeout(
+      `${BASE_URL}/figures/featured`,
+      {},
+      30000,
+      2,
+      'FEATURED'
+    );
+
     performanceTracker.end('getFeaturedFigures');
     return Array.isArray(data) ? data : [];
     
@@ -232,7 +253,7 @@ const getFeaturedFigures = async () => {
  */
 const searchFigures = async (params = {}) => {
   const query = params.query || params.searchTerm;
-  
+
   // PERFORMANCE: Early return for invalid queries
   if (!query || query.trim().length < 2) {
     return [];
@@ -240,57 +261,46 @@ const searchFigures = async (params = {}) => {
 
   try {
     performanceTracker.start('searchFigures');
-    
+
     const queryParams = new URLSearchParams();
     queryParams.append("query", query.trim());
 
-    // PERFORMANCE: Search local database first (faster)
-    console.log("🔍 Searching local database first...");
-    const localResults = await fetchWithTimeout(
-      `${BASE_URL}/figures/search?${queryParams.toString()}`
+    // SEARCH STRATEGY: Always search Wikipedia with exact match DB prioritization
+    // This uses the /api/search endpoint which:
+    // 1. Checks for exact match in database
+    // 2. Searches Wikipedia for all results
+    // 3. Filters out duplicates already in DB
+    // 4. Returns exact match first, then Wikipedia results (without auto-saving)
+    console.log("🔍 Searching Wikipedia with DB exact match check...");
+    const results = await fetchWithTimeout(
+      `${BASE_URL}/search?${queryParams.toString()}`,
+      {},
+      30000, // 30 second timeout for Wikipedia search
+      2,
+      'SEARCH'
     );
 
-    // PERFORMANCE: Return local results immediately if found
-    if (localResults && localResults.length > 0) {
-      performanceTracker.end('searchFigures');
-      console.log(`✅ Found ${localResults.length} local results`);
-      return localResults;
-    }
-
-    // PERFORMANCE: Only search Wikipedia if no local results
-    console.log("🌐 No local results, searching Wikipedia...");
-    try {
-      const wikipediaResults = await fetchWithTimeout(
-        `${BASE_URL}/search?${queryParams.toString()}`
-      );
-
-      if (!wikipediaResults || !Array.isArray(wikipediaResults)) {
-        performanceTracker.end('searchFigures');
-        return [];
-      }
-
-      // PERFORMANCE: Process and normalize Wikipedia results
-      const processedResults = wikipediaResults.map((result) => ({
-        ...result,
-        wikipediaId: result.wikipediaId || result._id,
-        imageUrl: result.imageUrl || result.image,
-        category: result.category || matchToCategory(result),
-        source: result.source || 'Wikipedia',
-        isFromWikipedia: true // Flag for UI handling
-      }));
-
-      performanceTracker.end('searchFigures');
-      console.log(`✅ Found ${processedResults.length} Wikipedia results`);
-      return processedResults;
-
-    } catch (wikiError) {
-      console.error("❌ Wikipedia search failed:", wikiError);
+    if (!results || !Array.isArray(results)) {
       performanceTracker.end('searchFigures');
       return [];
     }
 
-  } catch (localError) {
-    console.error("❌ Local database search failed:", localError);
+    // Process and normalize results
+    const processedResults = results.map((result) => ({
+      ...result,
+      wikipediaId: result.wikipediaId || result._id,
+      imageUrl: result.imageUrl || result.image,
+      category: result.category || matchToCategory(result),
+      source: result.source || 'Wikipedia',
+      isFromDatabase: !!result._id // Flag to distinguish DB vs Wikipedia results
+    }));
+
+    performanceTracker.end('searchFigures');
+    console.log(`✅ Found ${processedResults.length} results (mix of DB exact matches and Wikipedia)`);
+    return processedResults;
+
+  } catch (error) {
+    console.error("❌ Search failed:", error);
     performanceTracker.end('searchFigures');
     return [];
   }
