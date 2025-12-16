@@ -15,56 +15,99 @@ const searchController = async (req, res) => {
 
     console.log("Searching for:", searchTerm);
 
-    // Step 1: Search Wikipedia only - no database search
-    console.log("🔍 Searching Wikipedia...");
-    const wikiResults = await searchFigures({ searchTerm });
-    console.log(`Found ${wikiResults.length} results from Wikipedia`);
+    // Step 1: Parallel Search - Local DB and Wikipedia
+    const [localResults, wikiResults] = await Promise.all([
+      // Local Search (MongoDB)
+      searchLocalFigures(searchTerm),
+      // Wikipedia Search
+      searchFigures({ searchTerm, rows: 20 })
+    ]);
 
-    // Step 2: For each Wikipedia result, check if it exists in database
-    // If it exists, swap with the database version (preserves likes/saves)
-    const processedResults = await Promise.all(
-      wikiResults.map(async (wikiPerson) => {
-        if (!wikiPerson.imageUrl || wikiPerson.imageUrl.includes("placeholder")) {
-          return null;
-        }
+    console.log(`Found ${localResults.length} local results and ${wikiResults.length} wiki results`);
 
-        // Check if this person exists in database by name or wikipediaId
-        const dbMatch = await Figure.findOne({
-          $or: [
-            { wikipediaId: wikiPerson.wikipediaId },
-            { name: { $regex: `^${wikiPerson.name}$`, $options: "i" } }
-          ]
-        });
+    // Step 2: Merge and Deduplicate
+    // Create a map of combined results, prioritizing Local versions
+    const combinedResultsMap = new Map();
 
-        if (dbMatch) {
-          // Return database version instead of Wikipedia version
-          // This preserves all the like/save relationships
-          console.log(`🔄 Swapping Wikipedia result with DB version: ${dbMatch.name}`);
-          return dbMatch.toObject();
-        }
+    // Add local results first (they are our priority)
+    localResults.forEach(figure => {
+      // Use wikipediaId or _id as key
+      const key = figure.wikipediaId || figure._id.toString();
+      combinedResultsMap.set(key, { ...figure, _source: 'local' });
+    });
 
-        // Return Wikipedia result as-is (user can save it later if they want)
-        return wikiPerson;
-      })
-    );
+    // Add wiki results if they don't exist locally
+    wikiResults.forEach(wikiFigure => {
+      if (!wikiFigure.imageUrl || wikiFigure.imageUrl.includes("placeholder")) {
+        return; // Skip low quality wiki results
+      }
 
-    const validResults = processedResults.filter(Boolean);
+      // Check if we already have this figure (by wikipediaId)
+      if (wikiFigure.wikipediaId && combinedResultsMap.has(wikiFigure.wikipediaId)) {
+        return; // Skip, we satisfy this with a local version
+      }
 
-    // Sort by relevance to search query
-    const sortedResults = validResults.sort((a, b) => {
-      const aNameMatch = a.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const bNameMatch = b.name.toLowerCase().includes(searchTerm.toLowerCase());
+      // Soft check by name for figures that might not have wikipediaId locally yet
+      // This prevents "Martin Luther King" (Wiki) showing up next to "Martin Luther King" (Local custom ID)
+      const duplicateByName = Array.from(combinedResultsMap.values()).some(localFig => 
+        localFig.name.toLowerCase() === wikiFigure.name.toLowerCase()
+      );
 
-      if (aNameMatch && !bNameMatch) return -1;
-      if (!aNameMatch && bNameMatch) return 1;
+      if (!duplicateByName) {
+        combinedResultsMap.set(wikiFigure.wikipediaId, { ...wikiFigure, _source: 'wiki' });
+      }
+    });
+
+    // Step 3: Sort Combined Results
+    const sortedResults = Array.from(combinedResultsMap.values()).sort((a, b) => {
+      // 1. Exact Name Priority
+      const term = searchTerm.toLowerCase();
+      const aName = a.name.toLowerCase();
+      const bName = b.name.toLowerCase();
+      
+      const aExact = aName === term;
+      const bExact = bName === term;
+      if (aExact && !bExact) return -1;
+      if (!aExact && bExact) return 1;
+
+      // 2. Starts With Priority
+      const aStarts = aName.startsWith(term);
+      const bStarts = bName.startsWith(term);
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+
+      // 3. Local Source Priority (if relevance is roughly equal)
+      if (a._source === 'local' && b._source !== 'local') return -0.5; // Slight boost to local
+      if (a._source !== 'local' && b._source === 'local') return 0.5;
+
       return 0;
     });
 
-    console.log(`📊 Returning ${sortedResults.length} Wikipedia results (some swapped with DB versions)`);
-    res.json(sortedResults.slice(0, 15));
+    console.log(`📊 Returning ${sortedResults.length} combined results`);
+    res.json(sortedResults.slice(0, 20));
   } catch (error) {
     console.error("Search error:", error);
     res.status(500).json({ message: "Error performing search" });
+  }
+};
+
+// Helper for Local Search (borrowed/optimized from figures.js logic)
+const searchLocalFigures = async (searchTerm) => {
+  try {
+    const query = searchTerm.trim();
+    
+    // Use MongoDB text search for relevance
+    return await Figure.find(
+      { $text: { $search: query } },
+      { score: { $meta: "textScore" } }
+    )
+    .select("-owners") // Don't leak private data
+    .sort({ score: { $meta: "textScore" } })
+    .lean()
+    .limit(20);
+  } catch (err) {
+    console.error("Local search error:", err);
+    return [];
   }
 };
 
@@ -403,6 +446,7 @@ function extractWikidataLabel(claim, wikidataResponse) {
 }
 
 // NEW: Extract year from Wikidata claim
+// NEW: Extract year from Wikidata claim
 function extractYearFromWikidataClaim(claim) {
   if (!claim || !claim.mainsnak || !claim.mainsnak.datavalue) {
     return null;
@@ -412,12 +456,28 @@ function extractYearFromWikidataClaim(claim) {
 
   // Wikidata dates come in format: +1948-08-30T00:00:00Z
   if (value.time) {
-    const match = value.time.match(/^[+-]?(\d{4})/);
+    // Handle BCE dates (start with -) and regular dates (start with +)
+    // Regex matches the sign and the year digits
+    const match = value.time.match(/^([+-])?(\d+)/);
     if (match) {
-      const year = parseInt(match[1]);
+      const sign = match[1] || '+';
+      const yearStr = match[2];
+      let year = parseInt(yearStr, 10);
+
+      // Pad year with leading zeros if it's less than 4 digits (though Wikidata usually gives 11 chars)
+      // Actually standard Wikidata ISO is pretty consistent.
+      
       const currentYear = new Date().getFullYear();
-      if (year >= 1700 && year <= currentYear) {
-        return year;
+      
+      if (sign === '-') {
+        // BCE date
+        return `${year} BCE`;
+      }
+      
+      // Standard CE date validation
+      // Allow historical figures (e.g. 1500s) but filter obvious far-future bad data
+      if (year <= currentYear + 1) {
+        return year.toString();
       }
     }
   }
@@ -454,18 +514,32 @@ function formatWikipediaData(data, searchTerm, peopleOnly = false) {
         console.log(`✅ Using Wikidata dates for ${page.title}: ${years}`);
       } else if (page.wikidataBirth) {
         // Check if person is likely still alive
-        const currentYear = new Date().getFullYear();
-        const age = currentYear - page.wikidataBirth;
+        // Only assume living if birth was recent (<120 years ago)
+        let isLikelyAlive = false;
+        const birthYearInt = parseInt(page.wikidataBirth);
+        
+        if (!isNaN(birthYearInt) && !page.wikidataBirth.includes('BCE')) {
+            const currentYear = new Date().getFullYear();
+            const age = currentYear - birthYearInt;
+            if (age < 115) {
+                // If text also suggests living, confirm it
+                 if (page.extract && /\bis\s+(?:a|an|the)/.test(page.extract)) {
+                    isLikelyAlive = true;
+                 }
+            }
+        }
 
-        if (age < 120 && page.extract && /\bis\s+(?:a|an|the)/.test(page.extract)) {
+        if (isLikelyAlive) {
           years = `${page.wikidataBirth}-Present`;
           console.log(`✅ Using Wikidata birth (living) for ${page.title}: ${years}`);
         } else {
+          // Just show birth year if we can't confirm death or living status
+          // This avoids "1920-Present" for someone who died but Wikidata missed the death date
           years = `${page.wikidataBirth}`;
           console.log(`✅ Using Wikidata birth only for ${page.title}: ${years}`);
         }
       } else if (page.wikidataDeath) {
-        years = `Unknown-${page.wikidataDeath}`;
+        years = `?- ${page.wikidataDeath}`;
         console.log(`⚠️ Only death date from Wikidata for ${page.title}: ${years}`);
       }
     } else {
