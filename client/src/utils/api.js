@@ -8,6 +8,9 @@ import { BASE_URL } from "./constants";
 // Reduces redundant network requests and improves loading times
 const cache = new Map();
 
+// PERFORMANCE: Request deduplication - track in-flight requests to prevent duplicates
+const pendingRequests = new Map();
+
 // PERFORMANCE: Different cache durations for different data types
 const CACHE_DURATIONS = {
   FEATURED: 24 * 60 * 60 * 1000, // 24 hours (featured figures rotate daily)
@@ -16,35 +19,71 @@ const CACHE_DURATIONS = {
   SEARCH: 10 * 60 * 1000          // 10 minutes (search results)
 };
 
-// Performance monitoring utilities
+// PERFORMANCE: Track active timers to prevent race condition warnings
+const activeTimers = new Set();
+
+// Performance monitoring utilities with race condition fix
 const performanceTracker = {
   start: (label) => {
-    if (performance && performance.mark) {
-      performance.mark(`${label}-start`);
+    // Prevent duplicate timer warnings by checking if timer exists
+    if (activeTimers.has(label)) {
+      return; // Timer already running, skip
     }
-    console.time(`⏱️ ${label}`);
+    activeTimers.add(label);
+    
+    if (performance && performance.mark) {
+      try {
+        performance.mark(`${label}-start`);
+      } catch {
+        // Ignore if mark already exists
+      }
+    }
+    try {
+      console.time(`⏱️ ${label}`);
+    } catch {
+      // Ignore timer conflicts
+    }
   },
   
   end: (label) => {
+    // Only end timer if it was started
+    if (!activeTimers.has(label)) {
+      return; // Timer wasn't started, skip
+    }
+    activeTimers.delete(label);
+    
     if (performance && performance.mark && performance.measure) {
-      performance.mark(`${label}-end`);
-      performance.measure(label, `${label}-start`, `${label}-end`);
-      
-      const measure = performance.getEntriesByName(label)[0];
-      if (measure) {
-        console.log(`⚡ ${label} completed in: ${measure.duration.toFixed(2)}ms`);
+      try {
+        performance.mark(`${label}-end`);
+        performance.measure(label, `${label}-start`, `${label}-end`);
+        
+        const measures = performance.getEntriesByName(label);
+        const measure = measures[measures.length - 1];
+        if (measure) {
+          console.log(`⚡ ${label} completed in: ${measure.duration.toFixed(2)}ms`);
+        }
+        // Clean up performance entries
+        performance.clearMarks(`${label}-start`);
+        performance.clearMarks(`${label}-end`);
+        performance.clearMeasures(label);
+      } catch {
+        // Ignore measurement errors
       }
     }
-    console.timeEnd(`⏱️ ${label}`);
+    try {
+      console.timeEnd(`⏱️ ${label}`);
+    } catch {
+      // Ignore timer conflicts
+    }
   }
 };
 
 // =============================================================================
-// PERFORMANCE IMPROVEMENT: Cached Fetch Function
+// PERFORMANCE IMPROVEMENT: Cached Fetch Function with Request Deduplication
 // =============================================================================
 
 /**
- * Enhanced fetch function with caching and performance monitoring
+ * Enhanced fetch function with caching, request deduplication and performance monitoring
  * @param {string} url - The URL to fetch
  * @param {object} options - Fetch options
  * @param {string} cacheType - Cache duration type: 'FEATURED', 'REGULAR', 'USER_DATA', 'SEARCH'
@@ -63,48 +102,65 @@ const cachedFetch = async (url, options = {}, cacheType = 'REGULAR') => {
     }
   }
 
+  // PERFORMANCE: Request deduplication - if request is already in-flight, return existing promise
+  if (pendingRequests.has(cacheKey)) {
+    console.log('🔗 Joining existing request for:', url.split('/').pop());
+    return pendingRequests.get(cacheKey);
+  }
+
   // PERFORMANCE: Track network request timing
   const requestLabel = `API-${url.split('/').pop()}`;
   performanceTracker.start(requestLabel);
 
-  try {
-    console.log('🌐 Network request to:', url.split('/').pop());
-    
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-    });
+  // Create the request promise
+  const requestPromise = (async () => {
+    try {
+      console.log('🌐 Network request to:', url.split('/').pop());
+      
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        ...options,
+      });
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    // PERFORMANCE: Cache successful responses (but not empty arrays for searches)
-    if (cacheType !== 'NONE') {
-      const shouldCache = !(cacheType === 'SEARCH' && Array.isArray(data) && data.length === 0);
-      if (shouldCache) {
-        cache.set(cacheKey, {
-          data,
-          timestamp: Date.now(),
-        });
-        console.log(`💾 Cached response for: ${url.split('/').pop()} (${cacheType})`);
-      } else {
-        console.log(`⏭️  Skipping cache for empty search result: ${url.split('/').pop()}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
+
+      const data = await response.json();
+
+      // PERFORMANCE: Cache successful responses (but not empty arrays for searches)
+      if (cacheType !== 'NONE') {
+        const shouldCache = !(cacheType === 'SEARCH' && Array.isArray(data) && data.length === 0);
+        if (shouldCache) {
+          cache.set(cacheKey, {
+            data,
+            timestamp: Date.now(),
+          });
+          console.log(`💾 Cached response for: ${url.split('/').pop()} (${cacheType})`);
+        } else {
+          console.log(`⏭️  Skipping cache for empty search result: ${url.split('/').pop()}`);
+        }
+      }
+
+      performanceTracker.end(requestLabel);
+      return data;
+
+    } catch (error) {
+      performanceTracker.end(requestLabel);
+      throw error;
+    } finally {
+      // PERFORMANCE: Clean up pending request when done
+      pendingRequests.delete(cacheKey);
     }
+  })();
 
-    performanceTracker.end(requestLabel);
-    return data;
+  // Store the promise for deduplication
+  pendingRequests.set(cacheKey, requestPromise);
 
-  } catch (error) {
-    performanceTracker.end(requestLabel);
-    throw error;
-  }
+  return requestPromise;
 };
 
 // =============================================================================
@@ -579,7 +635,7 @@ const getCacheStats = () => {
     entries: Array.from(cache.keys()).map(key => ({
       key,
       age: Date.now() - cache.get(key).timestamp,
-      expired: (Date.now() - cache.get(key).timestamp) > CACHE_DURATION
+      expired: (Date.now() - cache.get(key).timestamp) > CACHE_DURATIONS.REGULAR
     }))
   };
   console.log('📊 Cache Stats:', stats);
