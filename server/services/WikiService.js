@@ -2,8 +2,13 @@ require("dotenv").config();
 const fetch = require("node-fetch");
 const Figure = require("../models/figure");
 const checkDupes = require("../helper/checkDupes");
+const { cacheService, CACHE_TTL } = require("./cacheService");
 
 const API_BASE_URL = "https://en.wikipedia.org/w/api.php";
+
+// PERFORMANCE: In-memory cache for Wikipedia search results
+const wikiSearchCache = new Map();
+const WIKI_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 const searchController = async (req, res) => {
   try {
@@ -13,14 +18,27 @@ const searchController = async (req, res) => {
       return res.status(400).json({ message: "Search term is required" });
     }
 
+    const normalizedTerm = searchTerm.trim().toLowerCase();
+    const cacheKey = `search:${normalizedTerm}`;
+
+    // PERFORMANCE: Check cache first
+    const cached = cacheService.get(cacheKey);
+    if (cached) {
+      res.set({
+        'Cache-Control': 'public, max-age=600, stale-while-revalidate=120',
+        'X-Cache': 'HIT'
+      });
+      return res.json(cached);
+    }
+
     console.log("Searching for:", searchTerm);
 
     // Step 1: Parallel Search - Local DB and Wikipedia
     const [localResults, wikiResults] = await Promise.all([
       // Local Search (MongoDB)
       searchLocalFigures(searchTerm),
-      // Wikipedia Search
-      searchFigures({ searchTerm, rows: 20 })
+      // Wikipedia Search (with its own caching)
+      searchFiguresWithCache(searchTerm)
     ]);
 
     console.log(`Found ${localResults.length} local results and ${wikiResults.length} wiki results`);
@@ -83,13 +101,45 @@ const searchController = async (req, res) => {
       return 0;
     });
 
-    console.log(`📊 Returning ${sortedResults.length} combined results`);
-    res.json(sortedResults.slice(0, 20));
+    const finalResults = sortedResults.slice(0, 20);
+
+    // PERFORMANCE: Cache the combined result
+    cacheService.set(cacheKey, finalResults, CACHE_TTL.SEARCH_LOCAL);
+
+    console.log(`📊 Returning ${finalResults.length} combined results`);
+    res.set({
+      'Cache-Control': 'public, max-age=600, stale-while-revalidate=120',
+      'X-Cache': 'MISS'
+    });
+    res.json(finalResults);
   } catch (error) {
     console.error("Search error:", error);
     res.status(500).json({ message: "Error performing search" });
   }
 };
+
+// PERFORMANCE: Wrapper for searchFigures with caching
+async function searchFiguresWithCache(searchTerm) {
+  const cacheKey = `wiki:${searchTerm.toLowerCase().trim()}`;
+  
+  // Check in-memory wiki cache
+  const cached = wikiSearchCache.get(cacheKey);
+  if (cached && Date.now() < cached.expiresAt) {
+    console.log(`⚡ Wiki cache HIT: ${searchTerm}`);
+    return cached.data;
+  }
+
+  // Fetch from Wikipedia
+  const results = await searchFigures({ searchTerm, rows: 20 });
+  
+  // Cache the result
+  wikiSearchCache.set(cacheKey, {
+    data: results,
+    expiresAt: Date.now() + WIKI_CACHE_TTL
+  });
+  
+  return results;
+}
 
 // Helper for Local Search (borrowed/optimized from figures.js logic)
 const searchLocalFigures = async (searchTerm) => {

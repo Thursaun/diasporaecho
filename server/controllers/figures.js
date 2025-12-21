@@ -4,13 +4,42 @@ const { ERROR_MESSAGES } = require("../config/constants");
 const NotFoundError = require("../utils/errors/NotFoundError");
 const UnauthorizedError = require("../utils/errors/UnauthorizedError");
 const FeaturedFiguresService = require("../services/featuredFiguresService");
+const { cacheService, CACHE_TTL } = require("../services/cacheService");
 
-const getFigures = (req, res, next) => {
-  Figure.find({})
-    .select("-owners")
-    .sort({ createdAt: -1 })
-    .then((figures) => res.status(200).json(figures))
-    .catch((err) => res.status(500).json({ message: err.message }));
+// PERFORMANCE: Optimized getFigures with caching
+const getFigures = async (req, res, next) => {
+  try {
+    const cacheKey = 'figures:all';
+    
+    // Check cache first
+    const cached = cacheService.get(cacheKey);
+    if (cached) {
+      // Add cache headers for browser caching
+      res.set({
+        'Cache-Control': 'public, max-age=300, stale-while-revalidate=60',
+        'X-Cache': 'HIT'
+      });
+      return res.status(200).json(cached);
+    }
+
+    // Fetch from database
+    const figures = await Figure.find({})
+      .select("-owners")
+      .sort({ createdAt: -1 })
+      .lean() // PERFORMANCE: Return plain objects
+      .exec();
+
+    // Cache the result
+    cacheService.set(cacheKey, figures, CACHE_TTL.FIGURES_ALL);
+
+    res.set({
+      'Cache-Control': 'public, max-age=300, stale-while-revalidate=60',
+      'X-Cache': 'MISS'
+    });
+    res.status(200).json(figures);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
 
 const getFigureById = (req, res, next) => {

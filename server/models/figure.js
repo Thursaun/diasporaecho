@@ -126,8 +126,13 @@ const FigureSchema = new mongoose.Schema({
   },
 });
 
+// PERFORMANCE: Compound indexes for common queries
 FigureSchema.index({ name: 1, imageUrl: 1 });
 FigureSchema.index({ name: 'text', description: 'text', category: 'text' });
 FigureSchema.index({ occupation: 1 });
+FigureSchema.index({ likes: -1, createdAt: -1 }); // Featured figures sorting
+FigureSchema.index({ isFeatured: 1, featuredRank: 1 }); // Featured lookup
+FigureSchema.index({ createdAt: -1 }); // Default sorting
 
 module.exports = mongoose.model("Figure", FigureSchema);
+
