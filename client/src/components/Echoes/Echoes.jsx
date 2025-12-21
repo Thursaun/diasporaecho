@@ -221,16 +221,17 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
   // =============================================================================
 
   return (
-    <div className="container mx-auto px-4 py-4 sm:py-6 md:py-8">
-      {/* Header with performance stats */}
-      <div className="text-center mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-4">Echoes Gallery</h1>
-        {!loading && allFigures.length > 0 && (
-          <p className="text-sm sm:text-base text-gray-600">
-            Explore {allFigures.length} inspiring figures from history.
-          </p>
-        )}
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-4 sm:py-6 md:py-8">
+        {/* Header with performance stats */}
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-4 text-gray-900">Echoes Gallery</h1>
+          {!loading && allFigures.length > 0 && (
+            <p className="text-sm sm:text-base text-gray-600">
+              Explore {allFigures.length} inspiring figures from history.
+            </p>
+          )}
+        </div>
 
       {/* PERFORMANCE: Optimized Category Navigation with scroll optimization */}
       <div className="mb-6 sm:mb-8 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
@@ -395,6 +396,7 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
           </div>
         </>
       )}
+      </div>
     </div>
   );
 }
