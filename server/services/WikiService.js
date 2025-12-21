@@ -8,7 +8,17 @@ const API_BASE_URL = "https://en.wikipedia.org/w/api.php";
 
 // PERFORMANCE: In-memory cache for Wikipedia search results
 const wikiSearchCache = new Map();
-const WIKI_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+const WIKI_CACHE_TTL = 60 * 60 * 1000; // 1 hour (increased from 30min)
+
+// PERFORMANCE: Timeout wrapper for external API calls
+const withTimeout = (promise, ms) => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Timeout')), ms)
+    )
+  ]);
+};
 
 const searchController = async (req, res) => {
   try {
@@ -21,7 +31,7 @@ const searchController = async (req, res) => {
     const normalizedTerm = searchTerm.trim().toLowerCase();
     const cacheKey = `search:${normalizedTerm}`;
 
-    // PERFORMANCE: Check cache first
+    // PERFORMANCE: Check cache first (instant response)
     const cached = cacheService.get(cacheKey);
     if (cached) {
       res.set({
@@ -32,24 +42,46 @@ const searchController = async (req, res) => {
     }
 
     console.log("Searching for:", searchTerm);
+    const startTime = Date.now();
 
-    // Step 1: Parallel Search - Local DB and Wikipedia
-    const [localResults, wikiResults] = await Promise.all([
-      // Local Search (MongoDB)
-      searchLocalFigures(searchTerm),
-      // Wikipedia Search (with its own caching)
-      searchFiguresWithCache(searchTerm)
-    ]);
+    // PERFORMANCE: Get local results FAST first (usually <100ms)
+    const localResults = await searchLocalFigures(searchTerm);
+    console.log(`Found ${localResults.length} local results in ${Date.now() - startTime}ms`);
 
-    console.log(`Found ${localResults.length} local results and ${wikiResults.length} wiki results`);
+    // PERFORMANCE: If we have enough local results, return immediately
+    // and skip Wikipedia call entirely for speed
+    if (localResults.length >= 10) {
+      const finalResults = localResults.slice(0, 20).map(fig => ({
+        ...fig,
+        _source: 'local'
+      }));
+      
+      // Cache and return fast local results
+      cacheService.set(cacheKey, finalResults, CACHE_TTL.SEARCH_LOCAL);
+      
+      res.set({
+        'Cache-Control': 'public, max-age=600, stale-while-revalidate=120',
+        'X-Cache': 'MISS-LOCAL-ONLY'
+      });
+      console.log(`📊 Fast response: ${finalResults.length} local results in ${Date.now() - startTime}ms`);
+      return res.json(finalResults);
+    }
 
-    // Step 2: Merge and Deduplicate
-    // Create a map of combined results, prioritizing Local versions
+    // PERFORMANCE: For sparse local results, try Wikipedia with 5s timeout
+    let wikiResults = [];
+    try {
+      wikiResults = await withTimeout(searchFiguresWithCache(searchTerm), 5000);
+      console.log(`Found ${wikiResults.length} wiki results in ${Date.now() - startTime}ms`);
+    } catch (err) {
+      console.warn(`⚠️ Wikipedia search timed out or failed for "${searchTerm}":`, err.message);
+      // Continue with local results only
+    }
+
+    // Merge and Deduplicate
     const combinedResultsMap = new Map();
 
     // Add local results first (they are our priority)
     localResults.forEach(figure => {
-      // Use wikipediaId or _id as key
       const key = figure.wikipediaId || figure._id.toString();
       combinedResultsMap.set(key, { ...figure, _source: 'local' });
     });
@@ -57,16 +89,13 @@ const searchController = async (req, res) => {
     // Add wiki results if they don't exist locally
     wikiResults.forEach(wikiFigure => {
       if (!wikiFigure.imageUrl || wikiFigure.imageUrl.includes("placeholder")) {
-        return; // Skip low quality wiki results
+        return;
       }
 
-      // Check if we already have this figure (by wikipediaId)
       if (wikiFigure.wikipediaId && combinedResultsMap.has(wikiFigure.wikipediaId)) {
-        return; // Skip, we satisfy this with a local version
+        return;
       }
 
-      // Soft check by name for figures that might not have wikipediaId locally yet
-      // This prevents "Martin Luther King" (Wiki) showing up next to "Martin Luther King" (Local custom ID)
       const duplicateByName = Array.from(combinedResultsMap.values()).some(localFig => 
         localFig.name.toLowerCase() === wikiFigure.name.toLowerCase()
       );
@@ -76,9 +105,8 @@ const searchController = async (req, res) => {
       }
     });
 
-    // Step 3: Sort Combined Results
+    // Sort Combined Results
     const sortedResults = Array.from(combinedResultsMap.values()).sort((a, b) => {
-      // 1. Exact Name Priority
       const term = searchTerm.toLowerCase();
       const aName = a.name.toLowerCase();
       const bName = b.name.toLowerCase();
@@ -88,14 +116,12 @@ const searchController = async (req, res) => {
       if (aExact && !bExact) return -1;
       if (!aExact && bExact) return 1;
 
-      // 2. Starts With Priority
       const aStarts = aName.startsWith(term);
       const bStarts = bName.startsWith(term);
       if (aStarts && !bStarts) return -1;
       if (!aStarts && bStarts) return 1;
 
-      // 3. Local Source Priority (if relevance is roughly equal)
-      if (a._source === 'local' && b._source !== 'local') return -0.5; // Slight boost to local
+      if (a._source === 'local' && b._source !== 'local') return -0.5;
       if (a._source !== 'local' && b._source === 'local') return 0.5;
 
       return 0;
@@ -103,10 +129,10 @@ const searchController = async (req, res) => {
 
     const finalResults = sortedResults.slice(0, 20);
 
-    // PERFORMANCE: Cache the combined result
+    // Cache the combined result
     cacheService.set(cacheKey, finalResults, CACHE_TTL.SEARCH_LOCAL);
 
-    console.log(`📊 Returning ${finalResults.length} combined results`);
+    console.log(`📊 Returning ${finalResults.length} combined results in ${Date.now() - startTime}ms`);
     res.set({
       'Cache-Control': 'public, max-age=600, stale-while-revalidate=120',
       'X-Cache': 'MISS'
