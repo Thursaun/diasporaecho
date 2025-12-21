@@ -1,9 +1,31 @@
 import { Link, NavLink } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import logo from "../../assets/logo.jpeg";
 
-function Header({ loggedIn, onRegisterClick, onSignOut }) {
+function Header({ loggedIn, onRegisterClick, onLoginClick, onSignOut }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  // MODERN: Add scroll detection for navbar shrink effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // MODERN: Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -13,290 +35,256 @@ function Header({ loggedIn, onRegisterClick, onSignOut }) {
     setIsMobileMenuOpen(false);
   };
 
+  // Navigation items for cleaner code
+  const navItems = [
+    { to: "/", label: "Home", icon: "M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" },
+    { to: "/echoes", label: "Echoes", icon: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" },
+    { to: "/about", label: "About", icon: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
+  ];
+
   return (
-    <header className="bg-dark/95 backdrop-blur-md text-white shadow-xl border-b border-white/10 sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-3">
-        <div className="flex justify-between items-center">
-          {/* MODERN: Enhanced Logo with glass morphism */}
-          <div className="flex items-center flex-shrink-0">
-            <Link to="/" className="flex items-center gap-2 md:gap-3 group" onClick={closeMobileMenu}>
+    <>
+      {/* MODERN: Sticky header with dynamic height based on scroll */}
+      <header 
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          isScrolled 
+            ? 'bg-dark/98 backdrop-blur-xl shadow-2xl py-2' 
+            : 'bg-dark/95 backdrop-blur-md py-3 md:py-4'
+        } border-b border-white/10`}
+      >
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center">
+            {/* MODERN: Logo with enhanced hover effects */}
+            <Link 
+              to="/" 
+              className="flex items-center gap-2 sm:gap-3 group" 
+              onClick={closeMobileMenu}
+            >
               <div className="relative">
-                {/* Animated glow effect on hover */}
-                <div className="absolute inset-0 bg-secondary/20 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-secondary/40 to-primary/40 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-all duration-500 scale-150"></div>
                 <img
                   src={logo}
-                  alt="Diaspora Echo Logo"
-                  className="h-10 w-10 md:h-12 md:w-12 rounded-full object-cover ring-2 ring-secondary/50 group-hover:ring-secondary transition-all duration-300 relative z-10 group-hover:scale-105"
+                  alt="Diaspora Echo"
+                  className={`rounded-full object-cover ring-2 ring-secondary/50 group-hover:ring-secondary transition-all duration-300 relative z-10 group-hover:scale-110 ${
+                    isScrolled ? 'h-8 w-8 sm:h-9 sm:w-9' : 'h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12'
+                  }`}
                 />
               </div>
-              <h1 className="flex items-center text-xl md:text-2xl lg:text-3xl font-bold text-white leading-tight transition-all duration-300 group-hover:text-secondary">
+              <span className={`font-bold bg-gradient-to-r from-white via-white to-secondary bg-clip-text text-transparent group-hover:from-secondary group-hover:to-white transition-all duration-300 ${
+                isScrolled ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl md:text-3xl'
+              }`}>
                 Diaspora Echo
-              </h1>
+              </span>
             </Link>
-          </div>
 
-          {/* MODERN: Enhanced Desktop Navigation */}
-          <nav className="hidden lg:block">
-            <ul className="flex space-x-4 xl:space-x-6 items-center">
-              <li>
+            {/* MODERN: Desktop Navigation with pill-style active states */}
+            <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
+              {navItems.map((item) => (
                 <NavLink
-                  to="/"
+                  key={item.to}
+                  to={item.to}
                   className={({ isActive }) =>
-                    `text-sm xl:text-base font-medium transition-all duration-300 px-3 py-2 rounded-lg relative ${isActive
-                      ? "text-secondary"
-                      : "text-white/90 hover:text-secondary hover:bg-white/5"}`
+                    `relative px-4 py-2 text-sm xl:text-base font-medium rounded-full transition-all duration-300 ${
+                      isActive
+                        ? "bg-secondary text-dark shadow-lg shadow-secondary/30"
+                        : "text-white/80 hover:text-white hover:bg-white/10"
+                    }`
                   }
                 >
-                  {({ isActive }) => (
-                    <>
-                      Home
-                      {isActive && (
-                        <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-secondary rounded-full"></span>
-                      )}
-                    </>
-                  )}
+                  {item.label}
                 </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/echoes"
-                  className={({ isActive }) =>
-                    `text-sm xl:text-base font-medium transition-all duration-300 px-3 py-2 rounded-lg relative ${isActive
-                      ? "text-secondary"
-                      : "text-white/90 hover:text-secondary hover:bg-white/5"}`
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      Echoes
-                      {isActive && (
-                        <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-secondary rounded-full"></span>
-                      )}
-                    </>
-                  )}
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/about"
-                  className={({ isActive }) =>
-                    `text-sm xl:text-base font-medium transition-all duration-300 px-3 py-2 rounded-lg relative ${isActive
-                      ? "text-secondary"
-                      : "text-white/90 hover:text-secondary hover:bg-white/5"}`
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      About
-                      {isActive && (
-                        <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-secondary rounded-full"></span>
-                      )}
-                    </>
-                  )}
-                </NavLink>
-              </li>
+              ))}
+              
+              {/* Auth buttons */}
               {loggedIn ? (
                 <>
-                  <li>
-                    <NavLink
-                      to="/profile"
-                      className={({ isActive }) =>
-                        `text-sm xl:text-base font-medium transition-all duration-300 px-3 py-2 rounded-lg relative ${isActive
-                          ? "text-secondary"
-                          : "text-white/90 hover:text-secondary hover:bg-white/5"}`
-                      }
-                    >
-                      {({ isActive }) => (
-                        <>
-                          <span className="flex items-center gap-2">
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                            </svg>
-                            Profile
-                          </span>
-                          {isActive && (
-                            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-secondary rounded-full"></span>
-                          )}
-                        </>
-                      )}
-                    </NavLink>
-                  </li>
-                  <li>
-                    <button
-                      className="bg-secondary/90 backdrop-blur-sm text-dark px-4 py-2 text-sm xl:px-5 xl:py-2.5 xl:text-base rounded-lg hover:bg-secondary transition-all duration-300 font-semibold shadow-lg hover:shadow-secondary/50 hover:scale-105 border border-secondary"
-                      onClick={onSignOut}
-                    >
-                      Sign Out
-                    </button>
-                  </li>
+                  <NavLink
+                    to="/profile"
+                    className={({ isActive }) =>
+                      `relative px-4 py-2 text-sm xl:text-base font-medium rounded-full transition-all duration-300 flex items-center gap-2 ${
+                        isActive
+                          ? "bg-secondary text-dark shadow-lg shadow-secondary/30"
+                          : "text-white/80 hover:text-white hover:bg-white/10"
+                      }`
+                    }
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    Profile
+                  </NavLink>
+                  <button
+                    onClick={onSignOut}
+                    className="ml-2 px-5 py-2 text-sm xl:text-base font-semibold rounded-full bg-white/10 text-white border border-white/20 hover:bg-red-500/80 hover:border-red-400 hover:text-white transition-all duration-300"
+                  >
+                    Sign Out
+                  </button>
                 </>
               ) : (
-                <li>
+                <div className="flex items-center gap-2 ml-2">
                   <button
-                    className="bg-secondary/90 backdrop-blur-sm text-dark px-4 py-2 text-sm xl:px-5 xl:py-2.5 xl:text-base rounded-lg hover:bg-secondary transition-all duration-300 font-semibold shadow-lg hover:shadow-secondary/50 hover:scale-105 border border-secondary"
-                    onClick={onRegisterClick}
+                    onClick={onLoginClick}
+                    className="px-4 py-2 text-sm xl:text-base font-medium text-white/80 hover:text-white transition-colors duration-300"
                   >
-                    Sign up
+                    Log In
                   </button>
-                </li>
+                  <button
+                    onClick={onRegisterClick}
+                    className="px-5 py-2 text-sm xl:text-base font-semibold rounded-full bg-gradient-to-r from-secondary to-secondary/80 text-dark hover:shadow-lg hover:shadow-secondary/40 hover:scale-105 transition-all duration-300"
+                  >
+                    Sign Up
+                  </button>
+                </div>
               )}
-            </ul>
-          </nav>
+            </nav>
 
-          {/* MODERN: Enhanced Mobile Hamburger Button */}
-          <button
-            className="lg:hidden p-2.5 rounded-lg bg-white/5 backdrop-blur-sm text-white hover:bg-white/10 hover:text-secondary focus:outline-none focus:ring-2 focus:ring-secondary/50 transition-all duration-300 border border-white/10 hover:border-secondary/30"
-            onClick={toggleMobileMenu}
-            aria-expanded={isMobileMenuOpen}
-            aria-label="Toggle navigation menu"
-          >
-            <svg
-              className="w-6 h-6 transition-transform duration-300"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-              style={{ transform: isMobileMenuOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}
+            {/* MODERN: Animated hamburger button */}
+            <button
+              className="lg:hidden relative w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-secondary/30 transition-all duration-300"
+              onClick={toggleMobileMenu}
+              aria-expanded={isMobileMenuOpen}
+              aria-label="Toggle menu"
             >
-              {isMobileMenuOpen ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2.5"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2.5"
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              )}
-            </svg>
-          </button>
+              <div className="w-5 h-4 relative flex flex-col justify-between">
+                <span className={`w-full h-0.5 bg-white rounded-full transform transition-all duration-300 origin-center ${
+                  isMobileMenuOpen ? 'rotate-45 translate-y-1.5' : ''
+                }`}></span>
+                <span className={`w-full h-0.5 bg-white rounded-full transition-all duration-300 ${
+                  isMobileMenuOpen ? 'opacity-0 scale-0' : ''
+                }`}></span>
+                <span className={`w-full h-0.5 bg-white rounded-full transform transition-all duration-300 origin-center ${
+                  isMobileMenuOpen ? '-rotate-45 -translate-y-1.5' : ''
+                }`}></span>
+              </div>
+            </button>
+          </div>
         </div>
+      </header>
 
-        {/* MODERN: Enhanced Mobile Navigation Menu */}
-        <div
-          className={`lg:hidden overflow-hidden transition-all duration-500 ease-in-out ${
-            isMobileMenuOpen
-              ? 'max-h-96 opacity-100 mt-4'
-              : 'max-h-0 opacity-0'
+      {/* Spacer for fixed header */}
+      <div className={`transition-all duration-300 ${isScrolled ? 'h-14' : 'h-16 md:h-20'}`}></div>
+
+      {/* MODERN: Full-screen slide-in mobile menu */}
+      <div 
+        className={`fixed inset-0 z-40 lg:hidden transition-all duration-500 ${
+          isMobileMenuOpen ? 'visible' : 'invisible'
+        }`}
+      >
+        {/* Backdrop */}
+        <div 
+          className={`absolute inset-0 bg-dark/80 backdrop-blur-sm transition-opacity duration-500 ${
+            isMobileMenuOpen ? 'opacity-100' : 'opacity-0'
+          }`}
+          onClick={closeMobileMenu}
+        ></div>
+
+        {/* Slide-in panel */}
+        <nav 
+          className={`absolute top-0 right-0 h-full w-[85%] max-w-sm bg-gradient-to-b from-dark via-dark to-dark/95 shadow-2xl transform transition-transform duration-500 ease-out ${
+            isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
         >
-          <nav className="border-t border-white/10 pt-4 bg-white/5 backdrop-blur-sm rounded-lg p-4">
-            <ul className="flex flex-col space-y-2">
-              <li>
-                <NavLink
-                  to="/"
-                  className={({ isActive }) =>
-                    `block py-3 px-4 text-base transition-all duration-300 rounded-lg font-medium ${isActive
-                      ? "text-secondary bg-white/10 border border-secondary/30 shadow-sm"
-                      : "text-white/90 hover:text-secondary hover:bg-white/10 border border-transparent hover:border-white/10"}`
-                  }
-                  onClick={closeMobileMenu}
+          {/* Mobile menu header */}
+          <div className="flex items-center justify-between p-5 border-b border-white/10">
+            <span className="text-lg font-semibold text-white">Menu</span>
+            <button
+              onClick={closeMobileMenu}
+              className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
+            >
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Mobile nav items */}
+          <div className="p-5 space-y-2">
+            {navItems.map((item, index) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={closeMobileMenu}
+                className={({ isActive }) =>
+                  `flex items-center gap-4 p-4 rounded-2xl font-medium transition-all duration-300 ${
+                    isActive
+                      ? "bg-secondary text-dark shadow-lg"
+                      : "text-white/80 hover:bg-white/5 hover:text-white"
+                  }`
+                }
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} />
+                  </svg>
+                </div>
+                <span className="text-lg">{item.label}</span>
+              </NavLink>
+            ))}
+
+            {loggedIn && (
+              <NavLink
+                to="/profile"
+                onClick={closeMobileMenu}
+                className={({ isActive }) =>
+                  `flex items-center gap-4 p-4 rounded-2xl font-medium transition-all duration-300 ${
+                    isActive
+                      ? "bg-secondary text-dark shadow-lg"
+                      : "text-white/80 hover:bg-white/5 hover:text-white"
+                  }`
+                }
+              >
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <span className="text-lg">Profile</span>
+              </NavLink>
+            )}
+          </div>
+
+          {/* Mobile auth buttons */}
+          <div className="absolute bottom-0 left-0 right-0 p-5 border-t border-white/10 bg-dark/50 backdrop-blur-sm">
+            {loggedIn ? (
+              <button
+                onClick={() => {
+                  onSignOut();
+                  closeMobileMenu();
+                }}
+                className="w-full py-4 rounded-2xl bg-white/10 text-white font-semibold hover:bg-red-500/80 transition-all duration-300 flex items-center justify-center gap-3"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Sign Out
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <button
+                  onClick={() => {
+                    onLoginClick();
+                    closeMobileMenu();
+                  }}
+                  className="w-full py-4 rounded-2xl bg-white/10 text-white font-semibold hover:bg-white/20 transition-all duration-300"
                 >
-                  <span className="flex items-center gap-3">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-                    </svg>
-                    Home
-                  </span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/echoes"
-                  className={({ isActive }) =>
-                    `block py-3 px-4 text-base transition-all duration-300 rounded-lg font-medium ${isActive
-                      ? "text-secondary bg-white/10 border border-secondary/30 shadow-sm"
-                      : "text-white/90 hover:text-secondary hover:bg-white/10 border border-transparent hover:border-white/10"}`
-                  }
-                  onClick={closeMobileMenu}
+                  Log In
+                </button>
+                <button
+                  onClick={() => {
+                    onRegisterClick();
+                    closeMobileMenu();
+                  }}
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-secondary to-secondary/80 text-dark font-semibold hover:shadow-lg hover:shadow-secondary/40 transition-all duration-300"
                 >
-                  <span className="flex items-center gap-3">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                    </svg>
-                    Echoes
-                  </span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/about"
-                  className={({ isActive }) =>
-                    `block py-3 px-4 text-base transition-all duration-300 rounded-lg font-medium ${isActive
-                      ? "text-secondary bg-white/10 border border-secondary/30 shadow-sm"
-                      : "text-white/90 hover:text-secondary hover:bg-white/10 border border-transparent hover:border-white/10"}`
-                  }
-                  onClick={closeMobileMenu}
-                >
-                  <span className="flex items-center gap-3">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                    About
-                  </span>
-                </NavLink>
-              </li>
-              {loggedIn ? (
-                <>
-                  <li>
-                    <NavLink
-                      to="/profile"
-                      className={({ isActive }) =>
-                        `block py-3 px-4 text-base transition-all duration-300 rounded-lg font-medium ${isActive
-                          ? "text-secondary bg-white/10 border border-secondary/30 shadow-sm"
-                          : "text-white/90 hover:text-secondary hover:bg-white/10 border border-transparent hover:border-white/10"}`
-                      }
-                      onClick={closeMobileMenu}
-                    >
-                      <span className="flex items-center gap-3">
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                        </svg>
-                        Profile
-                      </span>
-                    </NavLink>
-                  </li>
-                  <li className="pt-3 mt-2 border-t border-white/10">
-                    <button
-                      className="w-full bg-secondary/90 backdrop-blur-sm text-dark px-4 py-3 rounded-lg hover:bg-secondary transition-all duration-300 font-semibold text-base shadow-lg hover:shadow-secondary/50 border border-secondary flex items-center justify-center gap-2"
-                      onClick={() => {
-                        onSignOut();
-                        closeMobileMenu();
-                      }}
-                    >
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
-                      </svg>
-                      Sign Out
-                    </button>
-                  </li>
-                </>
-              ) : (
-                <li className="pt-3 mt-2 border-t border-white/10">
-                  <button
-                    className="w-full bg-secondary/90 backdrop-blur-sm text-dark px-4 py-3 rounded-lg hover:bg-secondary transition-all duration-300 font-semibold text-base shadow-lg hover:shadow-secondary/50 border border-secondary flex items-center justify-center gap-2"
-                    onClick={() => {
-                      onRegisterClick();
-                      closeMobileMenu();
-                    }}
-                  >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
-                    </svg>
-                    Sign up
-                  </button>
-                </li>
-              )}
-            </ul>
-          </nav>
-        </div>
+                  Sign Up Free
+                </button>
+              </div>
+            )}
+          </div>
+        </nav>
       </div>
-    </header>
+    </>
   );
 }
 
