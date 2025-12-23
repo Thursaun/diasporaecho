@@ -65,11 +65,12 @@ function Profile({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigu
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-center mb-8">My Collection</h1>
-      <p className="text-center text-gray-600 mb-8">
-        Welcome back, {currentUser.name}! You have {savedFigures.length} saved figure{savedFigures.length !== 1 ? 's' : ''}.
-      </p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold text-center mb-8 text-gray-900">My Collection</h1>
+        <p className="text-center text-gray-700 mb-8">
+          Welcome back, {currentUser.name}! You have {savedFigures.length} saved figure{savedFigures.length !== 1 ? 's' : ''}.
+        </p>
 
       <div className="mb-8 overflow-x-auto">
         <div className="inline-flex border-b border-gray-300 w-full">
@@ -190,6 +191,7 @@ function Profile({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigu
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }
