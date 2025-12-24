@@ -104,11 +104,14 @@ function AboutUs({ onRegisterClick }) {
 
       <section className="py-16 w-full">
         <div className="container mx-auto px-4 md:px-6">
-          <div className="flex flex-col md:flex-row gap-12 items-center w-full">
+          {/* Title Row */}
+          <h2 className="text-3xl font-bold mb-8 text-gray-900 w-full">
+            Acknowledgements
+          </h2>
+          
+          {/* Two-Column Content Row */}
+          <div className="flex flex-col md:flex-row gap-12 items-start w-full">
             <div className="md:w-1/2 w-full">
-              <h2 className="text-3xl font-bold mb-6 text-gray-900 w-full">
-                Acknowledgements
-              </h2>
               <p className="text-lg text-gray-700 w-full">
                 Diaspora Echo exists to combat the systematic erasure of Black history 
                 and the contributions of people of color. For too long, these stories have 
