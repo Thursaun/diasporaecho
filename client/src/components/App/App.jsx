@@ -76,7 +76,7 @@ const App = () => {
 
   const handleLoginClick = (formValues) => {
     setIsLoading(true);
-    login(formValues.email, formValues.password)
+    return login(formValues.email, formValues.password)
       .then((data) => {
         if (data.token) {
           localStorage.setItem("token", data.token);
@@ -102,7 +102,10 @@ const App = () => {
           setPendingLikeAction(null);
         }
       })
-      .catch((err) => console.log("Login error:", err))
+      .catch((err) => {
+        console.log("Login error:", err);
+        throw err; // Re-throw to let Login component handle the error state
+      })
       .finally(() => setIsLoading(false));
   };
 
