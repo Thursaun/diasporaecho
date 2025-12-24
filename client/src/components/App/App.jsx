@@ -129,6 +129,7 @@ const App = () => {
     localStorage.removeItem("token");
     setLoggedIn(false);
     setCurrentUser(null);
+    setSavedFigures([]); // Clear saved figures on signout
     navigate("/");
   };
 
