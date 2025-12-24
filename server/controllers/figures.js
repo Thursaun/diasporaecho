@@ -10,7 +10,7 @@ const { cacheService, CACHE_TTL } = require("../services/cacheService");
 const getFigures = async (req, res, next) => {
   try {
     const cacheKey = 'figures:all';
-    
+
     // Check cache first
     const cached = cacheService.get(cacheKey);
     if (cached) {
@@ -66,40 +66,43 @@ const getFigureByWikipediaId = async (req, res, next) => {
   try {
     // First try to find in local database
     let figure = await Figure.findOne({ wikipediaId });
-    
+
     if (figure) {
+      console.log('Got figure from DB:', figure.name);
+      // METRIC: Increment VIEW count for "Most Popular"
+      Figure.findByIdAndUpdate(figure._id, { $inc: { views: 1 } }).exec();
       return res.status(200).json(figure);
     }
 
     // If not in DB, fetch from Wikipedia API
     console.log(`📝 Figure ${wikipediaId} not in DB, fetching from Wikipedia...`);
-    
+
     const WIKI_FETCH_OPTIONS = {
       headers: {
         'User-Agent': 'DiasporaEcho/1.0 (https://github.com/Thursaun/diasporaecho; Contact: developer@diasporaecho.com) fetch/1.0'
       }
     };
-    
+
     // Fetch from Wikipedia using page ID
     const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&format=json&pageids=${wikipediaId}&prop=extracts|pageimages|info&exintro=1&explaintext=1&piprop=original|thumbnail&pithumbsize=800&inprop=url&origin=*`;
-    
+
     const response = await fetch(wikiUrl, WIKI_FETCH_OPTIONS);
     const data = await response.json();
-    
+
     if (!data.query || !data.query.pages || !data.query.pages[wikipediaId]) {
       throw new NotFoundError(ERROR_MESSAGES.FIGURE_NOT_FOUND);
     }
-    
+
     const page = data.query.pages[wikipediaId];
-    
+
     if (page.missing) {
       throw new NotFoundError(ERROR_MESSAGES.FIGURE_NOT_FOUND);
     }
-    
+
     // Extract years from description - look for actual date patterns, not pronunciation
     let years = "Unknown";
     const extract = page.extract || "";
-    
+
     // Pattern 1: Look for "Month Day, Year – Month Day, Year" or similar
     const fullDateMatch = extract.match(/([A-Z][a-z]+ \d{1,2}, \d{4})\s*[–—-]\s*([A-Z][a-z]+ \d{1,2}, \d{4})/);
     if (fullDateMatch) {
@@ -128,10 +131,10 @@ const getFigureByWikipediaId = async (req, res, next) => {
         }
       }
     }
-    
+
     // AUTO-SAVE: Create new figure in database for future interactions
     console.log(`💾 Auto-saving ${page.title} to database...`);
-    
+
     const newFigure = new Figure({
       wikipediaId: wikipediaId,
       name: page.title,
@@ -148,7 +151,7 @@ const getFigureByWikipediaId = async (req, res, next) => {
       occupation: [],
       owners: []
     });
-    
+
     try {
       figure = await newFigure.save();
       console.log(`✅ Auto-saved ${page.title} to database with ID: ${figure._id}`);
@@ -175,9 +178,9 @@ const getFigureByWikipediaId = async (req, res, next) => {
         _source: "wikipedia"
       });
     }
-    
+
     return res.status(200).json(figure);
-    
+
   } catch (err) {
     console.error("Error fetching figure:", err);
     if (err.name === "CastError") {
@@ -202,7 +205,7 @@ const saveFigure = (req, res, next) => {
   }
 
   // FIX: Don't require wikipediaId in request, generate if missing
-  const wikipediaId = figureData.wikipediaId || 
+  const wikipediaId = figureData.wikipediaId ||
     `custom_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   console.log("Using wikipediaId:", wikipediaId);
@@ -241,7 +244,7 @@ const saveFigure = (req, res, next) => {
         if (!user) {
           throw new Error("User not found");
         }
-        
+
         if (!user.savedFigures.includes(savedFigure._id)) {
           user.savedFigures.push(savedFigure._id);
           return user.save().then(() => savedFigure);
@@ -256,9 +259,9 @@ const saveFigure = (req, res, next) => {
     })
     .catch((error) => {
       console.error("Error in saveFigure:", error);
-      res.status(500).json({ 
-        message: "Failed to save figure", 
-        error: error.message 
+      res.status(500).json({
+        message: "Failed to save figure",
+        error: error.message
       });
     });
 };
@@ -270,7 +273,7 @@ const likeFigure = (req, res, next) => {
   console.log("Liking figure with ID:", figureId);
   console.log("User ID:", userId);
 
-  const findQuery = figureId.startsWith('custom_') || figureId.includes('_') 
+  const findQuery = figureId.startsWith('custom_') || figureId.includes('_')
     ? { wikipediaId: figureId }
     : { $or: [{ _id: figureId }, { wikipediaId: figureId }] };
 
@@ -328,8 +331,8 @@ const unsaveFigure = (req, res, next) => {
 
       console.log(`Figure ${figureId} removed from user ${userId}'s saved list`);
 
-      const findQuery = figureId.match(/^[0-9a-fA-F]{24}$/) 
-        ? { _id: figureId } 
+      const findQuery = figureId.match(/^[0-9a-fA-F]{24}$/)
+        ? { _id: figureId }
         : { wikipediaId: figureId };
 
       return Figure.findOne(findQuery);
@@ -342,16 +345,16 @@ const unsaveFigure = (req, res, next) => {
 
         return figure.save().then(() => {
           console.log(`User ${userId} removed from figure ${figureId}'s owners`);
-          res.status(200).json({ 
+          res.status(200).json({
             message: 'Figure unsaved successfully',
-            figureId: figureId 
+            figureId: figureId
           });
         });
       } else {
         console.log(`Figure ${figureId} not found, but removed from user's saved list`);
-        res.status(200).json({ 
+        res.status(200).json({
           message: 'Figure removed from saved list',
-          figureId: figureId 
+          figureId: figureId
         });
       }
     })
@@ -457,6 +460,10 @@ const searchFigures = async (req, res, next) => {
       // Exact match = highest score
       if (nameLower === searchTerm) {
         score += 1000;
+        // METRIC: Increment SEARCH HITS for "Featured" (if it's a local DB figure)
+        if (figure._id) {
+          Figure.findByIdAndUpdate(figure._id, { $inc: { searchHits: 1 } }).exec();
+        }
       }
       // Starts with query = very high score
       else if (nameLower.startsWith(searchTerm)) {

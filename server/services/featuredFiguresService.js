@@ -24,8 +24,10 @@ class FeaturedFiguresService {
   }
 
   /**
-   * Update featured figures based on current like counts
-   * Top 3 figures get ranks: 1 (🥇), 2 (🥈), 3 (🥉)
+   * Update featured figures based on distinct metrics:
+   * Rank 1 (🥇 Most Liked): Highest likes
+   * Rank 2 (🥈 Most Popular): Highest views
+   * Rank 3 (🥉 Featured): Highest searchHits
    */
   static async updateDailyFeatured() {
     try {
@@ -43,22 +45,48 @@ class FeaturedFiguresService {
       );
       console.log('✅ Cleared previous featured figures');
 
-      // STEP 2: Get top 3 figures by likes
-      const topFigures = await Figure.find({})
-        .sort({ likes: -1, createdAt: -1 }) // Sort by likes desc, then by date
-        .limit(3)
+      const selectedIds = new Set();
+      const featuredFigures = [];
+
+      // --- SELECTION 1: MOST LIKED (🥇) ---
+      const mostLiked = await Figure.findOne({ _id: { $nin: Array.from(selectedIds) } })
+        .sort({ likes: -1, createdAt: -1 })
         .exec();
 
-      if (topFigures.length === 0) {
+      if (mostLiked) {
+        selectedIds.add(mostLiked._id.toString());
+        featuredFigures.push({ figure: mostLiked, rank: 1 });
+      }
+
+      // --- SELECTION 2: MOST POPULAR / VIEWS (🥈) ---
+      const mostPopular = await Figure.findOne({ _id: { $nin: Array.from(selectedIds) } })
+        .sort({ views: -1, likes: -1 }) // Fallback to likes if views are tied
+        .exec();
+
+      if (mostPopular) {
+        selectedIds.add(mostPopular._id.toString());
+        featuredFigures.push({ figure: mostPopular, rank: 2 });
+      }
+
+      // --- SELECTION 3: FEATURED / SEARCH HITS (🥉) ---
+      const topSearched = await Figure.findOne({ _id: { $nin: Array.from(selectedIds) } })
+        .sort({ searchHits: -1, views: -1 }) // Fallback to views
+        .exec();
+
+      if (topSearched) {
+        selectedIds.add(topSearched._id.toString());
+        featuredFigures.push({ figure: topSearched, rank: 3 });
+      }
+
+      if (featuredFigures.length === 0) {
         console.warn('⚠️ No figures found to feature');
         this.clearCache();
         return [];
       }
 
-      // STEP 3: Update top 3 figures with featured status
+      // STEP 3: Update selected figures with featured status
       const now = new Date();
-      const updatePromises = topFigures.map((figure, index) => {
-        const rank = index + 1; // 1, 2, 3
+      const updatePromises = featuredFigures.map(({ figure, rank }) => {
         return Figure.findByIdAndUpdate(
           figure._id,
           {
@@ -74,10 +102,14 @@ class FeaturedFiguresService {
 
       const updatedFigures = await Promise.all(updatePromises);
 
+      // Sort back by rank for consistent return
+      updatedFigures.sort((a, b) => a.featuredRank - b.featuredRank);
+
       console.log('✅ Featured figures updated:');
-      updatedFigures.forEach((fig, idx) => {
-        const badge = idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉';
-        console.log(`  ${badge} #${idx + 1}: ${fig.name} (${fig.likes} likes)`);
+      updatedFigures.forEach((fig) => {
+        const badge = fig.featuredRank === 1 ? '🥇 Most Liked' : fig.featuredRank === 2 ? '🥈 Most Popular' : '🥉 Featured';
+        const metric = fig.featuredRank === 1 ? `${fig.likes} likes` : fig.featuredRank === 2 ? `${fig.views} views` : `${fig.searchHits} searches`;
+        console.log(`  ${badge}: ${fig.name} (${metric})`);
       });
 
       // PERFORMANCE: Update in-memory cache after DB update

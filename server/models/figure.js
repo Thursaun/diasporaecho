@@ -82,7 +82,7 @@ const FigureSchema = new mongoose.Schema({
     ],
     default: ["Scholars & Educators"],
     validate: {
-      validator: function(v) {
+      validator: function (v) {
         return v && v.length > 0;
       },
       message: 'At least one category is required'
@@ -131,13 +131,26 @@ const FigureSchema = new mongoose.Schema({
     type: [String],
     default: [],
   },
+  // Tracking Metrics for Featured Selection
+  views: {
+    type: Number,
+    default: 0,
+    index: true,
+  },
+  searchHits: {
+    type: Number,
+    default: 0,
+    index: true,
+  },
 });
 
 // PERFORMANCE: Compound indexes for common queries
 FigureSchema.index({ name: 1, imageUrl: 1 });
 FigureSchema.index({ name: 'text', description: 'text', category: 'text' });
 FigureSchema.index({ occupation: 1 });
-FigureSchema.index({ likes: -1, createdAt: -1 }); // Featured figures sorting
+FigureSchema.index({ likes: -1, createdAt: -1 }); // Most Liked sorting
+FigureSchema.index({ views: -1, createdAt: -1 }); // Most Popular sorting
+FigureSchema.index({ searchHits: -1, createdAt: -1 }); // Featured (Search) sorting
 FigureSchema.index({ isFeatured: 1, featuredRank: 1 }); // Featured lookup
 FigureSchema.index({ createdAt: -1 }); // Default sorting
 
