@@ -380,7 +380,7 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
           <div className="space-x-4">
             <button
               onClick={() => window.location.reload()}
-              className="bg-secondary text-dark px-6 py-2 rounded hover:bg-opacity-80 transition-colors font-medium"
+              className="bg-secondary text-white px-6 py-2 rounded hover:bg-opacity-80 transition-colors font-medium"
             >
               Retry Loading
             </button>
@@ -443,7 +443,7 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
               <button
                 onClick={loadMoreFigures}
                 disabled={loadingMore}
-                className="bg-secondary text-dark px-6 sm:px-8 py-3 rounded-lg hover:bg-opacity-80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-md text-sm sm:text-base min-h-[44px]"
+                className="bg-secondary text-white px-6 sm:px-8 py-3 rounded-lg hover:bg-opacity-80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-md text-sm sm:text-base min-h-[44px]"
               >
                 {loadingMore ? (
                   <span className="flex items-center justify-center">

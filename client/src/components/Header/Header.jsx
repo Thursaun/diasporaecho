@@ -86,7 +86,7 @@ function Header({ loggedIn, onRegisterClick, onLoginClick, onSignOut }) {
                   className={({ isActive }) =>
                     `relative px-4 py-2 text-sm xl:text-base font-medium rounded-full transition-all duration-300 ${
                       isActive
-                        ? "bg-secondary text-dark shadow-lg shadow-secondary/30"
+                        ? "bg-secondary text-white shadow-lg shadow-secondary/30"
                         : "text-white/80 hover:text-white hover:bg-white/10"
                     }`
                   }
@@ -103,7 +103,7 @@ function Header({ loggedIn, onRegisterClick, onLoginClick, onSignOut }) {
                     className={({ isActive }) =>
                       `relative px-4 py-2 text-sm xl:text-base font-medium rounded-full transition-all duration-300 flex items-center gap-2 ${
                         isActive
-                          ? "bg-secondary text-dark shadow-lg shadow-secondary/30"
+                          ? "bg-secondary text-white shadow-lg shadow-secondary/30"
                           : "text-white/80 hover:text-white hover:bg-white/10"
                       }`
                     }
@@ -130,7 +130,7 @@ function Header({ loggedIn, onRegisterClick, onLoginClick, onSignOut }) {
                   </button>
                   <button
                     onClick={onRegisterClick}
-                    className="px-5 py-2 text-sm xl:text-base font-semibold rounded-full bg-gradient-to-r from-secondary to-secondary/80 text-dark hover:shadow-lg hover:shadow-secondary/40 hover:scale-105 transition-all duration-300"
+                    className="px-5 py-2 text-sm xl:text-base font-semibold rounded-full bg-gradient-to-r from-secondary to-secondary/80 text-white hover:shadow-lg hover:shadow-secondary/40 hover:scale-105 transition-all duration-300"
                   >
                     Sign Up
                   </button>
@@ -207,7 +207,7 @@ function Header({ loggedIn, onRegisterClick, onLoginClick, onSignOut }) {
                 className={({ isActive }) =>
                   `flex items-center gap-4 p-4 rounded-2xl font-medium transition-all duration-300 ${
                     isActive
-                      ? "bg-secondary text-dark shadow-lg"
+                      ? "bg-secondary text-white shadow-lg"
                       : "text-white/80 hover:bg-white/5 hover:text-white"
                   }`
                 }
@@ -229,7 +229,7 @@ function Header({ loggedIn, onRegisterClick, onLoginClick, onSignOut }) {
                 className={({ isActive }) =>
                   `flex items-center gap-4 p-4 rounded-2xl font-medium transition-all duration-300 ${
                     isActive
-                      ? "bg-secondary text-dark shadow-lg"
+                      ? "bg-secondary text-white shadow-lg"
                       : "text-white/80 hover:bg-white/5 hover:text-white"
                   }`
                 }
@@ -275,7 +275,7 @@ function Header({ loggedIn, onRegisterClick, onLoginClick, onSignOut }) {
                     onRegisterClick();
                     closeMobileMenu();
                   }}
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-secondary to-secondary/80 text-dark font-semibold hover:shadow-lg hover:shadow-secondary/40 transition-all duration-300"
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-secondary to-secondary/80 text-white font-semibold hover:shadow-lg hover:shadow-secondary/40 transition-all duration-300"
                 >
                   Sign Up Free
                 </button>

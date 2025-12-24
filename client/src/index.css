@@ -55,7 +55,7 @@
     @apply bg-primary text-white hover:bg-opacity-90;
   }
   .btn-secondary {
-    @apply bg-secondary text-dark hover:bg-opacity-90;
+    @apply bg-secondary text-white hover:bg-opacity-90;
   }
   .card {
     @apply bg-white rounded-lg shadow-md overflow-hidden;
