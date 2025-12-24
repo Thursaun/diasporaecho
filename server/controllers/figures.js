@@ -96,11 +96,37 @@ const getFigureByWikipediaId = async (req, res, next) => {
       throw new NotFoundError(ERROR_MESSAGES.FIGURE_NOT_FOUND);
     }
     
-    // Extract years from description if present
+    // Extract years from description - look for actual date patterns, not pronunciation
     let years = "Unknown";
-    const yearMatch = (page.extract || "").match(/\(([^)]*\d{4}[^)]*)\)/);
-    if (yearMatch) {
-      years = yearMatch[1];
+    const extract = page.extract || "";
+    
+    // Pattern 1: Look for "Month Day, Year – Month Day, Year" or similar
+    const fullDateMatch = extract.match(/([A-Z][a-z]+ \d{1,2}, \d{4})\s*[–—-]\s*([A-Z][a-z]+ \d{1,2}, \d{4})/);
+    if (fullDateMatch) {
+      // Extract just years from full dates
+      const birthYear = fullDateMatch[1].match(/\d{4}/)?.[0];
+      const deathYear = fullDateMatch[2].match(/\d{4}/)?.[0];
+      if (birthYear && deathYear) {
+        years = `${birthYear} - ${deathYear}`;
+      }
+    } else {
+      // Pattern 2: Look for "born YEAR" or just year ranges like "1933–2003"
+      const yearRangeMatch = extract.match(/\b(\d{4})\s*[–—-]\s*(\d{4})\b/);
+      if (yearRangeMatch) {
+        years = `${yearRangeMatch[1]} - ${yearRangeMatch[2]}`;
+      } else {
+        // Pattern 3: Just birth year with "born" keyword
+        const bornMatch = extract.match(/born[^)]*(\d{4})/i);
+        if (bornMatch) {
+          // Check if person might be living (no death year found)
+          const deathMatch = extract.match(/died[^)]*(\d{4})|(\d{4})\s*[–—-]\s*(\d{4})/i);
+          if (deathMatch) {
+            years = deathMatch[3] ? `${deathMatch[2]} - ${deathMatch[3]}` : `${bornMatch[1]} - ${deathMatch[1]}`;
+          } else {
+            years = `${bornMatch[1]} - Present`;
+          }
+        }
+      }
     }
     
     // AUTO-SAVE: Create new figure in database for future interactions
