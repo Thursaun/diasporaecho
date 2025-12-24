@@ -80,24 +80,29 @@ const App = () => {
       .then((data) => {
         if (data.token) {
           localStorage.setItem("token", data.token);
-          setLoggedIn(true);
-          setCurrentUser(data.user);
-          closeModal();
-          navigate("/");
-          fetchSavedFigures();
+          // Call checkToken to get user data (login only returns token)
+          return checkToken(data.token);
+        }
+        throw new Error("No token received");
+      })
+      .then((userData) => {
+        setLoggedIn(true);
+        setCurrentUser(userData);
+        closeModal();
+        navigate("/");
+        fetchSavedFigures();
 
-          if (pendingSaveAction) {
-            handleSaveFigureClick(pendingSaveAction);
-            setPendingSaveAction(null);
-          }
+        if (pendingSaveAction) {
+          handleSaveFigureClick(pendingSaveAction);
+          setPendingSaveAction(null);
+        }
 
-          if (pendingLikeAction) {
-            handleLikeFigureClick(pendingLikeAction);
-            setPendingLikeAction(null);
-          }
+        if (pendingLikeAction) {
+          handleLikeFigureClick(pendingLikeAction);
+          setPendingLikeAction(null);
         }
       })
-      .catch((err) => console.log(err))
+      .catch((err) => console.log("Login error:", err))
       .finally(() => setIsLoading(false));
   };
 
