@@ -413,7 +413,7 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
       {!loading && !error && allFigures.length > 0 && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-            {currentFigures.map((figure) => (
+            {currentFigures.map((figure, index) => (
               <div key={`${figure._id || figure.wikipediaId}-${figure.category}`} className="mx-auto w-full max-w-sm">
                 <LazyFigureCard
                   figure={figure}
@@ -422,6 +422,7 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
                   onLoginClick={onLoginClick}
                   isSaved={isFigureSaved(figure)}
                   isLiked={isFigureLiked(figure)}
+                  priority={index < 4} // PERFORMANCE: Eager load first 4 images for better LCP
                 />
               </div>
             ))}
