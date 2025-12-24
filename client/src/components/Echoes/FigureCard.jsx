@@ -33,29 +33,27 @@ const FigureCard = memo(function FigureCard({
   const [isFlipped, setIsFlipped] = useState(false);
   const hoverTimerRef = useRef(null);
 
-  // PERFORMANCE: Early return for invalid data
-  if (!figure) {
-    console.warn('FigureCard received invalid figure data');
-    return null;
-  }
-
   // =============================================================================
-  // DATA EXTRACTION: Optimized destructuring
+  // DATA EXTRACTION: Optimized destructuring (with fallbacks for null figure)
   // =============================================================================
   
   const {
-    _id,
-    wikipediaId,
-    name,
-    imageUrl,
-    description,
-    years,
+    _id = null,
+    wikipediaId = null,
+    name = '',
+    imageUrl = '',
+    description = '',
+    years = null,
     tags = [],
     likes = 0,
-    source,
+    source = '',
     categories = [],
     occupation = [],
-  } = figure;
+  } = figure || {};
+
+  // =============================================================================
+  // PERFORMANCE IMPROVEMENT: Memoized Event Handlers
+  // =============================================================================
 
   // =============================================================================
   // PERFORMANCE IMPROVEMENT: Memoized Event Handlers
@@ -133,6 +131,15 @@ const FigureCard = memo(function FigureCard({
     console.log('🔐 Login prompt for:', name);
     onLoginClick();
   }, [name, onLoginClick]);
+
+  // =============================================================================
+  // EARLY RETURN: After all hooks are defined
+  // =============================================================================
+  
+  if (!figure) {
+    console.warn('FigureCard received invalid figure data');
+    return null;
+  }
 
   // =============================================================================
   // HELPERS
