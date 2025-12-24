@@ -4,16 +4,16 @@ import CurrentUserContext from "../../contexts/CurrentUserContext";
 import FigureCard from '../Echoes/FigureCard';
 
 const categories = [
-  "Intellectuals Leaders",
-  "Civil Rights Activists", 
+  "Scholars & Educators",
+  "Activists & Freedom Fighters",
   "Political Leaders",
-  "Educators & Scholars",
-  "Arts, Culture & Entertainment",
+  "Arts & Entertainment",
+  "Musicians",
   "Inventors & Innovators",
-  "Athletic Icons",
-  "Freedom Fighters",
+  "Athletes",
   "Pan-African Leaders",
   "Literary Icons",
+  "Business & Entrepreneurs",
 ];
 
 function Profile({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigures = [] }) {
@@ -42,11 +42,30 @@ function Profile({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigu
         (item._id || item.name)
       );
       
-      const categorized = { all: validFigures };
+      // Helper: Extract last name (last word of name) for sorting
+      const getLastName = (name) => {
+        if (!name) return '';
+        const parts = name.trim().split(' ');
+        return parts[parts.length - 1].toLowerCase();
+      };
+      
+      // Helper: Sort figures by last name A-Z
+      const sortByLastName = (figures) => {
+        return [...figures].sort((a, b) => {
+          const lastNameA = getLastName(a.name);
+          const lastNameB = getLastName(b.name);
+          return lastNameA.localeCompare(lastNameB);
+        });
+      };
+      
+      // Sort "all" and each category by last name
+      const categorized = { all: sortByLastName(validFigures) };
       categories.forEach((category) => {
-        categorized[category] = validFigures.filter(
-          (figure) => figure.category === category
+        // Multi-category support: check if figure's categories array includes this category
+        const filtered = validFigures.filter((figure) => 
+          figure.categories?.includes(category) || figure.category === category
         );
+        categorized[category] = sortByLastName(filtered);
       });
       
       setCategorizedFigures(categorized);

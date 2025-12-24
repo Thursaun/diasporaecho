@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import FigureCard from "../Echoes/FigureCard";
 import LazyFigureCard from "../Echoes/LazyFigureCard";
 import { searchFigures, getFeaturedFigures } from "../../utils/api";
+import { getOptimizedImageUrl } from "../../utils/imageUtils";
 
 function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick, currentUser }) {
   const [searchResults, setSearchResults] = useState([]);
@@ -138,7 +139,7 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
           const link = document.createElement('link');
           link.rel = 'preload';
           link.as = 'image';
-          link.href = figure.imageUrl;
+          link.href = getOptimizedImageUrl(figure.imageUrl, 400);
           link.fetchPriority = index === 0 ? 'high' : 'low';
           document.head.appendChild(link);
         });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { getFigures } from '../../utils/api';
 import LazyFigureCard from './LazyFigureCard';
 
@@ -7,16 +7,16 @@ import LazyFigureCard from './LazyFigureCard';
 // =============================================================================
 
 const categories = [
-  "Intellectuals Leaders",
-  "Civil Rights Activists", 
+  "Scholars & Educators",
+  "Activists & Freedom Fighters",
   "Political Leaders",
-  "Educators & Scholars",
-  "Arts, Culture & Entertainment",
+  "Arts & Entertainment",
+  "Musicians",
   "Inventors & Innovators",
-  "Athletic Icons",
-  "Freedom Fighters",
+  "Athletes",
   "Pan-African Leaders",
   "Literary Icons",
+  "Business & Entrepreneurs",
 ];
 
 // PERFORMANCE: Pagination constants for faster initial load
@@ -34,6 +34,33 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
   const [error, setError] = useState(null);
   const [activeCategory, setActiveCategory] = useState("all");
   const [displayCount, setDisplayCount] = useState(INITIAL_LOAD);
+  
+  // Scroll arrows state
+  const categoryScrollRef = useRef(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(true);
+  
+  // Check scroll position to show/hide arrows
+  const handleCategoryScroll = useCallback(() => {
+    const container = categoryScrollRef.current;
+    if (!container) return;
+    
+    const { scrollLeft, scrollWidth, clientWidth } = container;
+    setShowLeftArrow(scrollLeft > 10);
+    setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
+  }, []);
+  
+  // Scroll category tabs
+  const scrollCategories = useCallback((direction) => {
+    const container = categoryScrollRef.current;
+    if (!container) return;
+    
+    const scrollAmount = 200;
+    container.scrollBy({ 
+      left: direction === 'left' ? -scrollAmount : scrollAmount, 
+      behavior: 'smooth' 
+    });
+  }, []);
 
   // =============================================================================
   // PERFORMANCE IMPROVEMENT: Optimized like handler with local state update
@@ -104,15 +131,36 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
     if (!allFigures.length) return {};
     
     console.log('🔄 Recalculating categorized figures...');
-    const categorized = { all: allFigures };
+    
+    // Helper: Extract last name (last word of name) for sorting
+    const getLastName = (name) => {
+      if (!name) return '';
+      const parts = name.trim().split(' ');
+      return parts[parts.length - 1].toLowerCase();
+    };
+    
+    // Helper: Sort figures by last name A-Z
+    const sortByLastName = (figures) => {
+      return [...figures].sort((a, b) => {
+        const lastNameA = getLastName(a.name);
+        const lastNameB = getLastName(b.name);
+        return lastNameA.localeCompare(lastNameB);
+      });
+    };
+    
+    // Sort "all" and each category by last name
+    const categorized = { all: sortByLastName(allFigures) };
     
     categories.forEach((category) => {
-      categorized[category] = allFigures.filter(
-        (figure) => figure.category === category
+      // Multi-category support: check if figure's categories array includes this category
+      // Also supports legacy single category field for backwards compatibility
+      const filtered = allFigures.filter((figure) => 
+        figure.categories?.includes(category) || figure.category === category
       );
+      categorized[category] = sortByLastName(filtered);
     });
     
-    console.log('✅ Categorized figures calculated:', Object.keys(categorized).map(key => `${key}: ${categorized[key].length}`));
+    console.log('✅ Categorized figures calculated (sorted by last name):', Object.keys(categorized).map(key => `${key}: ${categorized[key].length}`));
     return categorized;
   }, [allFigures]);
 
@@ -233,49 +281,81 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
           )}
         </div>
 
-      {/* PERFORMANCE: Optimized Category Navigation with scroll optimization */}
-      <div className="mb-6 sm:mb-8 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="inline-flex border-b border-gray-300 w-full min-w-max">
+      {/* PERFORMANCE: Optimized Category Navigation with scroll arrows */}
+      <div className="mb-6 sm:mb-8 relative">
+        {/* Left scroll arrow */}
+        {showLeftArrow && (
           <button
-            className={`px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-xs sm:text-sm font-medium relative whitespace-nowrap transition-colors duration-200 min-h-[44px] flex items-center ${
-              activeCategory === "all"
-                ? "text-secondary"
-                : "text-gray-500 hover:text-secondary"
-            }`}
-            onClick={() => handleCategoryChange("all")}
+            onClick={() => scrollCategories('left')}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 shadow-md rounded-full p-1.5 hover:bg-gray-100 transition-all"
+            aria-label="Scroll left"
           >
-            <span>All Figures</span>
-            {!loading && (
-              <span className="ml-1 sm:ml-2 bg-gray-100 text-gray-600 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs">
-                {categorizedFigures.all?.length || 0}
-              </span>
-            )}
-            {activeCategory === "all" && (
-              <span className="absolute bottom-0 left-0 w-full h-0.5 bg-secondary"></span>
-            )}
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
           </button>
-
-          {categories.map((category) => (
+        )}
+        
+        {/* Right scroll arrow */}
+        {showRightArrow && (
+          <button
+            onClick={() => scrollCategories('right')}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 shadow-md rounded-full p-1.5 hover:bg-gray-100 transition-all"
+            aria-label="Scroll right"
+          >
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        )}
+        
+        <div 
+          ref={categoryScrollRef}
+          onScroll={handleCategoryScroll}
+          className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide"
+        >
+          <div className="inline-flex border-b border-gray-300 w-full min-w-max">
             <button
-              key={category}
               className={`px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-xs sm:text-sm font-medium relative whitespace-nowrap transition-colors duration-200 min-h-[44px] flex items-center ${
-                activeCategory === category
+                activeCategory === "all"
                   ? "text-secondary"
                   : "text-gray-500 hover:text-secondary"
               }`}
-              onClick={() => handleCategoryChange(category)}
+              onClick={() => handleCategoryChange("all")}
             >
-              <span>{category}</span>
+              <span>All Figures</span>
               {!loading && (
                 <span className="ml-1 sm:ml-2 bg-gray-100 text-gray-600 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs">
-                  {categorizedFigures[category]?.length || 0}
+                  {categorizedFigures.all?.length || 0}
                 </span>
               )}
-              {activeCategory === category && (
+              {activeCategory === "all" && (
                 <span className="absolute bottom-0 left-0 w-full h-0.5 bg-secondary"></span>
               )}
             </button>
-          ))}
+
+            {categories.map((category) => (
+              <button
+                key={category}
+                className={`px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-xs sm:text-sm font-medium relative whitespace-nowrap transition-colors duration-200 min-h-[44px] flex items-center ${
+                  activeCategory === category
+                    ? "text-secondary"
+                    : "text-gray-500 hover:text-secondary"
+                }`}
+                onClick={() => handleCategoryChange(category)}
+              >
+                <span>{category}</span>
+                {!loading && (
+                  <span className="ml-1 sm:ml-2 bg-gray-100 text-gray-600 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs">
+                    {categorizedFigures[category]?.length || 0}
+                  </span>
+                )}
+                {activeCategory === category && (
+                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-secondary"></span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

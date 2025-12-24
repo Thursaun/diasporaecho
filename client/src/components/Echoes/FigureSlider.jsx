@@ -1,38 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { getFeaturedFigures } from "../../utils/api";
+import { getOptimizedImageUrl } from "../../utils/imageUtils";
 
 // =============================================================================
-// PERFORMANCE: Image Optimization Utilities
+// PERFORMANCE: Optimized Image component with blur-up loading
 // =============================================================================
-
-/**
- * Optimize Wikipedia image URL to request smaller thumbnails
- * Reduces image size from ~500KB to ~20-50KB
- * @param {string} url - Original Wikipedia image URL
- * @param {number} size - Desired width in pixels
- * @returns {string} - Optimized URL or original if not Wikipedia
- */
-const getOptimizedImageUrl = (url, size = 300) => {
-  if (!url) return '';
-  
-  // Skip placeholder images
-  if (url.includes('placeholder')) return url;
-  
-  // Wikipedia image URLs follow this pattern:
-  // https://upload.wikimedia.org/wikipedia/commons/a/ab/Filename.ext
-  // Can be converted to thumbnail:
-  // https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Filename.ext/300px-Filename.ext
-  if (url.includes('upload.wikimedia.org') && !url.includes('/thumb/')) {
-    const match = url.match(/(.*\/wikipedia\/(?:commons|en)\/)([\w\d]\/[\w\d]{2}\/([^/]+))$/);
-    if (match) {
-      const [, baseUrl, pathWithFilename, filename] = match;
-      return `${baseUrl}thumb/${pathWithFilename}/${size}px-${filename}`;
-    }
-  }
-  
-  return url;
-};
 
 /**
  * PERFORMANCE: Optimized Image component with blur-up loading

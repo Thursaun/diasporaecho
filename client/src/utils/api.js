@@ -566,7 +566,7 @@ const unsaveFigure = async (figureId) => {
 const matchToCategory = (figure) => {
   // PERFORMANCE: Early return for invalid input
   if (!figure || !figure.description) {
-    return "Intellectuals Leaders";
+    return "Scholars & Educators";
   }
 
   // PERFORMANCE: Cache toLowerCase operations
@@ -577,15 +577,16 @@ const matchToCategory = (figure) => {
   // PERFORMANCE: Use single text search instead of multiple includes()
   // Define optimized keyword patterns for faster matching
   const categoryPatterns = {
-    "Civil Rights Activists": /civil rights|rights movement|activist|protest|discrimination|segregation/,
-    "Political Leaders": /president|senator|congressman|politician|mayor|governor|political/,
-    "Arts, Culture & Entertainment": /actor|actress|singer|musician|artist|entertainer|performer|music|film|television/,
-    "Literary Icons": /author|writer|poet|novelist|literature|book|poetry/,
-    "Educators & Scholars": /professor|teacher|educator|scholar|university|education|academic/,
-    "Inventors & Innovators": /inventor|invention|innovator|scientist|engineer|researcher|technology/,
-    "Athletic Icons": /athlete|sports|olympic|baseball|basketball|football|boxing|tennis/,
-    "Freedom Fighters": /freedom fighter|revolutionary|resistance|liberation|independence|rebellion/,
-    "Pan-African Leaders": /pan-african|african unity|diaspora|african nationalism/,
+    "Athletes": /athlete|sports|olympic|baseball|basketball|football|boxing|tennis|track|swimmer|golfer/,
+    "Musicians": /musician|singer|rapper|jazz|composer|songwriter|hip hop|gospel|soul|r&b|conductor|pianist/,
+    "Arts & Entertainment": /actor|actress|dancer|entertainer|performer|film|television|artist|painter|comedian/,
+    "Literary Icons": /author|writer|poet|novelist|literature|book|poetry|playwright|journalist/,
+    "Inventors & Innovators": /inventor|invention|innovator|scientist|engineer|researcher|technology|astronaut|physicist|chemist/,
+    "Scholars & Educators": /professor|teacher|educator|scholar|university|education|academic|historian|philosopher/,
+    "Business & Entrepreneurs": /entrepreneur|business|executive|founder|ceo|investor|banker|industrialist/,
+    "Political Leaders": /president|senator|congressman|politician|mayor|governor|political|diplomat|judge|lawyer/,
+    "Pan-African Leaders": /pan-african|african unity|diaspora|african nationalism|independence leader/,
+    "Activists & Freedom Fighters": /civil rights|rights movement|activist|protest|discrimination|freedom fighter|revolutionary|resistance|liberation|abolitionist/,
   };
 
   // PERFORMANCE: Test patterns in order of likelihood
@@ -596,7 +597,7 @@ const matchToCategory = (figure) => {
   }
 
   // Default category
-  return "Intellectuals Leaders";
+  return "Scholars & Educators";
 };
 
 // =============================================================================

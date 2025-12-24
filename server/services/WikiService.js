@@ -6,6 +6,15 @@ const { cacheService, CACHE_TTL } = require("./cacheService");
 
 const API_BASE_URL = "https://en.wikipedia.org/w/api.php";
 
+// Wikipedia API requires proper User-Agent to avoid blocking
+// See: https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy
+const WIKI_FETCH_OPTIONS = {
+  headers: {
+    'User-Agent': 'DiasporaEcho/1.0 (https://github.com/diasporaecho; diasporaecho@example.com)',
+    'Accept': 'application/json'
+  }
+};
+
 // PERFORMANCE: In-memory cache for Wikipedia search results
 const wikiSearchCache = new Map();
 const WIKI_CACHE_TTL = 60 * 60 * 1000; // 1 hour (increased from 30min)
@@ -20,6 +29,112 @@ const withTimeout = (promise, ms) => {
   ]);
 };
 
+// =============================================================================
+// IMPROVED CATEGORIZATION: Use Wikidata occupation to assign categories
+// Priority order matters - first match wins (prioritizes primary professions)
+// =============================================================================
+const CATEGORY_MAPPINGS = [
+  // Athletes - very specific, high priority
+  { 
+    keywords: ['athlete', 'basketball player', 'football player', 'baseball player', 'boxer', 'sprinter', 'track and field', 'olympian', 'tennis player', 'swimmer', 'golfer', 'wrestler', 'martial artist', 'soccer player', 'racing driver'],
+    category: 'Athletes' 
+  },
+  
+  // Musicians - separate category for rich musical heritage
+  { 
+    keywords: ['musician', 'singer', 'rapper', 'hip hop artist', 'jazz musician', 'composer', 'songwriter', 'record producer', 'disc jockey', 'conductor', 'pianist', 'guitarist', 'drummer', 'saxophonist', 'trumpeter', 'gospel singer', 'r&b singer', 'soul singer'],
+    category: 'Musicians' 
+  },
+  
+  // Arts & Entertainment (excluding musicians)
+  { 
+    keywords: ['actor', 'actress', 'dancer', 'choreographer', 'filmmaker', 'film director', 'director', 'artist', 'painter', 'sculptor', 'comedian', 'entertainer', 'television presenter', 'photographer', 'fashion designer', 'model'],
+    category: 'Arts & Entertainment' 
+  },
+  
+  // Literary Icons
+  { 
+    keywords: ['writer', 'author', 'novelist', 'poet', 'playwright', 'journalist', 'essayist', 'screenwriter', 'biographer', 'memoirist', 'lyricist', 'editor', 'literary critic'],
+    category: 'Literary Icons' 
+  },
+  
+  // Inventors & Innovators
+  { 
+    keywords: ['inventor', 'scientist', 'physicist', 'chemist', 'biologist', 'engineer', 'mathematician', 'astronaut', 'aerospace engineer', 'computer scientist', 'researcher', 'botanist', 'zoologist', 'surgeon', 'physician', 'doctor', 'nurse', 'medical researcher'],
+    category: 'Inventors & Innovators' 
+  },
+  
+  // Scholars & Educators
+  { 
+    keywords: ['professor', 'teacher', 'academic', 'historian', 'scholar', 'philosopher', 'theologian', 'university president', 'educator', 'librarian', 'sociologist', 'psychologist', 'economist', 'lecturer'],
+    category: 'Scholars & Educators' 
+  },
+  
+  // Business & Entrepreneurs (NEW)
+  { 
+    keywords: ['businessperson', 'entrepreneur', 'executive', 'ceo', 'founder', 'banker', 'investor', 'philanthropist', 'business executive', 'industrialist', 'publisher', 'media proprietor'],
+    category: 'Business & Entrepreneurs' 
+  },
+  
+  // Political Leaders
+  { 
+    keywords: ['politician', 'senator', 'congresswoman', 'congressman', 'representative', 'mayor', 'governor', 'president', 'diplomat', 'ambassador', 'judge', 'supreme court', 'attorney general', 'secretary', 'cabinet member', 'lawyer', 'attorney'],
+    category: 'Political Leaders' 
+  },
+  
+  // Pan-African Leaders
+  { 
+    keywords: ['pan-africanist', 'pan-african', 'liberator', 'independence leader', 'head of state', 'prime minister'],
+    category: 'Pan-African Leaders' 
+  },
+  
+  // Activists & Freedom Fighters (COMBINED)
+  { 
+    keywords: ['civil rights activist', 'civil rights leader', 'activist', 'organizer', 'social activist', 'human rights activist', 'minister', 'pastor', 'reverend', 'bishop', 'preacher', 'abolitionist', 'freedom fighter', 'underground railroad', 'slave revolt', 'anti-slavery', 'suffragist'],
+    category: 'Activists & Freedom Fighters' 
+  }
+];
+
+/**
+ * Determine ALL matching categories based on Wikidata occupation data
+ * Returns array of categories for multi-category support
+ * @param {string[]} occupations - Array of occupation strings from Wikidata P106
+ * @returns {string[]} - Array of matching categories
+ */
+function determineCategoriesFromOccupation(occupations) {
+  if (!occupations || !Array.isArray(occupations) || occupations.length === 0) {
+    return ['Scholars & Educators']; // Default fallback
+  }
+  
+  // Normalize occupations to lowercase for matching
+  const normalizedOccupations = occupations.map(o => o.toLowerCase());
+  const occupationString = normalizedOccupations.join(' ');
+  
+  // Collect ALL matching categories
+  const matchedCategories = new Set();
+  
+  for (const mapping of CATEGORY_MAPPINGS) {
+    for (const keyword of mapping.keywords) {
+      // Check if any occupation contains this keyword
+      if (normalizedOccupations.some(occ => occ.includes(keyword)) ||
+          occupationString.includes(keyword)) {
+        matchedCategories.add(mapping.category);
+        console.log(`📂 Category match: "${keyword}" → ${mapping.category}`);
+        break; // Move to next category mapping once we found a match
+      }
+    }
+  }
+  
+  // Return matched categories or default
+  if (matchedCategories.size === 0) {
+    console.log(`📂 No category match for occupations: ${occupations.join(', ')}`);
+    return ['Scholars & Educators'];
+  }
+  
+  console.log(`📂 All matched categories: ${[...matchedCategories].join(', ')}`);
+  return [...matchedCategories];
+}
+
 const searchController = async (req, res) => {
   try {
     const searchTerm = req.query.query || req.query.searchTerm || "";
@@ -29,9 +144,9 @@ const searchController = async (req, res) => {
     }
 
     const normalizedTerm = searchTerm.trim().toLowerCase();
-    const cacheKey = `search:${normalizedTerm}`;
+    const cacheKey = `wiki-search:${normalizedTerm}`;
 
-    // PERFORMANCE: Check cache first (instant response)
+    // Check cache first (instant response)
     const cached = cacheService.get(cacheKey);
     if (cached) {
       res.set({
@@ -41,106 +156,69 @@ const searchController = async (req, res) => {
       return res.json(cached);
     }
 
-    console.log("Searching for:", searchTerm);
+    console.log("🔍 Wikipedia-only search for:", searchTerm);
     const startTime = Date.now();
 
-    // PERFORMANCE: Get local results FAST first (usually <100ms)
-    const localResults = await searchLocalFigures(searchTerm);
-    console.log(`Found ${localResults.length} local results in ${Date.now() - startTime}ms`);
-
-    // PERFORMANCE: If we have enough local results, return immediately
-    // and skip Wikipedia call entirely for speed
-    if (localResults.length >= 10) {
-      const finalResults = localResults.slice(0, 20).map(fig => ({
-        ...fig,
-        _source: 'local'
-      }));
-      
-      // Cache and return fast local results
-      cacheService.set(cacheKey, finalResults, CACHE_TTL.SEARCH_LOCAL);
-      
-      res.set({
-        'Cache-Control': 'public, max-age=600, stale-while-revalidate=120',
-        'X-Cache': 'MISS-LOCAL-ONLY'
-      });
-      console.log(`📊 Fast response: ${finalResults.length} local results in ${Date.now() - startTime}ms`);
-      return res.json(finalResults);
-    }
-
-    // PERFORMANCE: For sparse local results, try Wikipedia with 5s timeout
+    // WIKIPEDIA-ONLY: Query Wikipedia directly for all search results
+    // This ensures consistent, accurate results from the source
     let wikiResults = [];
     try {
-      wikiResults = await withTimeout(searchFiguresWithCache(searchTerm), 5000);
-      console.log(`Found ${wikiResults.length} wiki results in ${Date.now() - startTime}ms`);
+      wikiResults = await withTimeout(searchFiguresWithCache(searchTerm), 8000);
+      console.log(`✅ Found ${wikiResults.length} Wikipedia results in ${Date.now() - startTime}ms`);
     } catch (err) {
-      console.warn(`⚠️ Wikipedia search timed out or failed for "${searchTerm}":`, err.message);
-      // Continue with local results only
+      console.warn(`⚠️ Wikipedia search failed for "${searchTerm}":`, err.message);
+      return res.status(503).json({ 
+        message: "Search temporarily unavailable. Please try again.",
+        results: []
+      });
     }
 
-    // Merge and Deduplicate
-    const combinedResultsMap = new Map();
+    // Filter: Only include results with valid images (no placeholders)
+    const validResults = wikiResults.filter(fig => 
+      fig.imageUrl && !fig.imageUrl.includes("placeholder")
+    );
 
-    // Add local results first (they are our priority)
-    localResults.forEach(figure => {
-      const key = figure.wikipediaId || figure._id.toString();
-      combinedResultsMap.set(key, { ...figure, _source: 'local' });
-    });
-
-    // Add wiki results if they don't exist locally
-    wikiResults.forEach(wikiFigure => {
-      if (!wikiFigure.imageUrl || wikiFigure.imageUrl.includes("placeholder")) {
-        return;
-      }
-
-      if (wikiFigure.wikipediaId && combinedResultsMap.has(wikiFigure.wikipediaId)) {
-        return;
-      }
-
-      const duplicateByName = Array.from(combinedResultsMap.values()).some(localFig => 
-        localFig.name.toLowerCase() === wikiFigure.name.toLowerCase()
-      );
-
-      if (!duplicateByName) {
-        combinedResultsMap.set(wikiFigure.wikipediaId, { ...wikiFigure, _source: 'wiki' });
-      }
-    });
-
-    // Sort Combined Results
-    const sortedResults = Array.from(combinedResultsMap.values()).sort((a, b) => {
+    // Sort by relevance: exact match first, then name starts with, then rest
+    const sortedResults = validResults.sort((a, b) => {
       const term = searchTerm.toLowerCase();
       const aName = a.name.toLowerCase();
       const bName = b.name.toLowerCase();
       
-      const aExact = aName === term;
-      const bExact = bName === term;
-      if (aExact && !bExact) return -1;
-      if (!aExact && bExact) return 1;
-
-      const aStarts = aName.startsWith(term);
-      const bStarts = bName.startsWith(term);
-      if (aStarts && !bStarts) return -1;
-      if (!aStarts && bStarts) return 1;
-
-      if (a._source === 'local' && b._source !== 'local') return -0.5;
-      if (a._source !== 'local' && b._source === 'local') return 0.5;
-
+      // Exact match first
+      if (aName === term) return -1;
+      if (bName === term) return 1;
+      
+      // Starts with term
+      if (aName.startsWith(term) && !bName.startsWith(term)) return -1;
+      if (!aName.startsWith(term) && bName.startsWith(term)) return 1;
+      
+      // Contains term
+      if (aName.includes(term) && !bName.includes(term)) return -1;
+      if (!aName.includes(term) && bName.includes(term)) return 1;
+      
       return 0;
     });
 
-    const finalResults = sortedResults.slice(0, 20);
+    // Limit to 20 results
+    const finalResults = sortedResults.slice(0, 20).map(fig => ({
+      ...fig,
+      _source: 'wikipedia' // Mark all as Wikipedia results
+    }));
 
-    // Cache the combined result
+    // Cache Wikipedia results
     cacheService.set(cacheKey, finalResults, CACHE_TTL.SEARCH_LOCAL);
 
-    console.log(`📊 Returning ${finalResults.length} combined results in ${Date.now() - startTime}ms`);
+    console.log(`📊 Returning ${finalResults.length} Wikipedia results in ${Date.now() - startTime}ms`);
+    
     res.set({
       'Cache-Control': 'public, max-age=600, stale-while-revalidate=120',
       'X-Cache': 'MISS'
     });
-    res.json(finalResults);
+    return res.json(finalResults);
+
   } catch (error) {
     console.error("Search error:", error);
-    res.status(500).json({ message: "Error performing search" });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -252,7 +330,7 @@ async function trySearchStrategies(searchQueries, limit, originalTerm) {
       });
 
       const opensearchUrl = `${API_BASE_URL}?${opensearchParams.toString()}`;
-      const opensearchResponse = await fetch(opensearchUrl);
+      const opensearchResponse = await fetch(opensearchUrl, WIKI_FETCH_OPTIONS);
 
       let pageIds = [];
 
@@ -272,7 +350,7 @@ async function trySearchStrategies(searchQueries, limit, originalTerm) {
           });
 
           const titlesToIdsUrl = `${API_BASE_URL}?${titlesToIdsParams.toString()}`;
-          const titlesToIdsResponse = await fetch(titlesToIdsUrl);
+          const titlesToIdsResponse = await fetch(titlesToIdsUrl, WIKI_FETCH_OPTIONS);
 
           if (titlesToIdsResponse.ok) {
             const titlesToIdsData = await titlesToIdsResponse.json();
@@ -295,7 +373,7 @@ async function trySearchStrategies(searchQueries, limit, originalTerm) {
         });
 
         const searchUrl = `${API_BASE_URL}?${searchQueryParams.toString()}`;
-        const response = await fetch(searchUrl);
+        const response = await fetch(searchUrl, WIKI_FETCH_OPTIONS);
 
         if (!response.ok) continue;
 
@@ -364,7 +442,7 @@ async function getPageDetails(pageIds, searchTerm, isTopicSearch) {
     });
 
     const detailsUrl = `${API_BASE_URL}?${detailsQueryParams.toString()}`;
-    const response = await fetch(detailsUrl);
+    const response = await fetch(detailsUrl, WIKI_FETCH_OPTIONS);
 
     if (!response.ok) {
       throw new Error(`Error fetching page details: ${response.statusText}`);
@@ -427,7 +505,7 @@ async function fetchWikidataBatch(wikidataIds, pageIdToWikidataId, pages) {
       origin: "*",
     })}`;
 
-    const response = await fetch(wikidataUrl);
+    const response = await fetch(wikidataUrl, WIKI_FETCH_OPTIONS);
     if (!response.ok) return;
 
     const wikidataResponse = await response.json();
@@ -589,30 +667,27 @@ function formatWikipediaData(data, searchTerm, peopleOnly = false) {
         years = `${page.wikidataBirth}-${page.wikidataDeath}`;
         console.log(`✅ Using Wikidata dates for ${page.title}: ${years}`);
       } else if (page.wikidataBirth) {
-        // Check if person is likely still alive
-        // Only assume living if birth was recent (<120 years ago)
-        let isLikelyAlive = false;
+        // No death date - check if person is likely still alive
         const birthYearInt = parseInt(page.wikidataBirth);
         
         if (!isNaN(birthYearInt) && !page.wikidataBirth.includes('BCE')) {
-            const currentYear = new Date().getFullYear();
-            const age = currentYear - birthYearInt;
-            if (age < 115) {
-                // If text also suggests living, confirm it
-                 if (page.extract && /\bis\s+(?:a|an|the)/.test(page.extract)) {
-                    isLikelyAlive = true;
-                 }
-            }
-        }
-
-        if (isLikelyAlive) {
-          years = `${page.wikidataBirth}-Present`;
-          console.log(`✅ Using Wikidata birth (living) for ${page.title}: ${years}`);
+          const currentYear = new Date().getFullYear();
+          const age = currentYear - birthYearInt;
+          
+          // If age is reasonable for a living person (< 115), show Present
+          // This assumes no death date means they're alive
+          if (age < 115 && age > 0) {
+            years = `${page.wikidataBirth}-Present`;
+            console.log(`✅ Using Wikidata birth (living) for ${page.title}: ${years} (age ~${age})`);
+          } else {
+            // Very old or future birth - just show birth year
+            years = `${page.wikidataBirth}`;
+            console.log(`⚠️ Birth only for ${page.title}: ${years}`);
+          }
         } else {
-          // Just show birth year if we can't confirm death or living status
-          // This avoids "1920-Present" for someone who died but Wikidata missed the death date
+          // BCE date or unparseable - just show birth year
           years = `${page.wikidataBirth}`;
-          console.log(`✅ Using Wikidata birth only for ${page.title}: ${years}`);
+          console.log(`📝 Birth only for ${page.title}: ${years}`);
         }
       } else if (page.wikidataDeath) {
         years = `?- ${page.wikidataDeath}`;
@@ -647,6 +722,8 @@ function formatWikipediaData(data, searchTerm, peopleOnly = false) {
       sourceUrl: page.fullurl || `https://en.wikipedia.org/?curid=${pageId}`,
       likes: 0,
       likedBy: [],
+      // MULTI-CATEGORY: All matching categories from Wikidata occupation
+      categories: determineCategoriesFromOccupation(page.wikidataOccupation),
       // Enhanced metadata from Wikidata
       occupation: page.wikidataOccupation || [],
       birthPlace: page.wikidataBirthPlace || null,
@@ -959,6 +1036,8 @@ function formatWikipediaData(data, searchTerm, peopleOnly = false) {
       sourceUrl: page.fullurl || `https://en.wikipedia.org/?curid=${pageId}`,
       likes: 0,
       likedBy: [],
+      // Default categories (this path doesn't have Wikidata occupation data)
+      categories: ["Scholars & Educators"],
     });
   }
 
@@ -1040,7 +1119,7 @@ const getFigureById = async (id) => {
       });
 
       const detailsUrl = `${API_BASE_URL}?${detailsQueryParams.toString()}`;
-      const response = await fetch(detailsUrl);
+      const response = await fetch(detailsUrl, WIKI_FETCH_OPTIONS);
 
       if (response.ok) {
         const data = await response.json();

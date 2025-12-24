@@ -65,21 +65,28 @@ const FigureSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  category: {
-    type: String,
+  // Multi-category support: figures can belong to multiple categories
+  categories: {
+    type: [String],
     enum: [
-      "Intellectuals Leaders",
-      "Civil Rights Activists",
+      "Scholars & Educators",
+      "Activists & Freedom Fighters",
       "Political Leaders",
-      "Educators & Scholars",
-      "Arts, Culture & Entertainment",
+      "Arts & Entertainment",
+      "Musicians",
       "Inventors & Innovators",
-      "Athletic Icons",
-      "Freedom Fighters",
+      "Athletes",
       "Pan-African Leaders",
       "Literary Icons",
+      "Business & Entrepreneurs",
     ],
-    required: true,
+    default: ["Scholars & Educators"],
+    validate: {
+      validator: function(v) {
+        return v && v.length > 0;
+      },
+      message: 'At least one category is required'
+    }
   },
   // PERFORMANCE: Featured figures tracking for daily rotation
   isFeatured: {

@@ -112,7 +112,7 @@ const saveFigure = (req, res, next) => {
           description: figureData.description || "",
           imageUrl: figureData.imageUrl || figureData.image || "",
           years: figureData.years || "",
-          category: figureData.category || "Intellectuals Leaders",
+          categories: figureData.categories || (figureData.category ? [figureData.category] : ["Scholars & Educators"]),
           tags: figureData.tags || [],
           source: figureData.source || "Wikipedia",
           wikipediaId: wikipediaId,

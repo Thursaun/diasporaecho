@@ -1,6 +1,7 @@
 import { useContext, useState, memo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import CurrentUserContext from "../../contexts/CurrentUserContext";
+import { getOptimizedImageUrl } from "../../utils/imageUtils";
 
 // =============================================================================
 // PERFORMANCE IMPROVEMENT: Memoized Component with custom comparison
@@ -47,7 +48,6 @@ const FigureCard = memo(function FigureCard({
     tags = [],
     likes = 0,
     source,
-    occupation = [],
   } = figure;
 
   // =============================================================================
@@ -141,7 +141,7 @@ const FigureCard = memo(function FigureCard({
 
         {!imageError ? (
           <img
-            src={imageUrl}
+            src={getOptimizedImageUrl(imageUrl, 400)}
             alt={`Portrait of ${name}`}
             className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:brightness-[0.5] ${
               imageLoaded ? 'opacity-100' : 'opacity-0'
@@ -150,7 +150,7 @@ const FigureCard = memo(function FigureCard({
             onError={handleImageError}
             loading={priority ? "eager" : "lazy"} // PERFORMANCE: Eager load for above-fold, lazy for others
             decoding="async" // PERFORMANCE: Non-blocking image decode
-            fetchpriority={priority ? "high" : "low"} // PERFORMANCE: Prioritize above-the-fold images
+            fetchPriority={priority ? "high" : "low"} // PERFORMANCE: Prioritize above-the-fold images
             style={{
               contentVisibility: 'auto', // PERFORMANCE: Skip rendering when off-screen
             }}
@@ -186,15 +186,7 @@ const FigureCard = memo(function FigureCard({
             {displayYears}
           </span>
         )}
-        {occupation && occupation.length > 0 && (
-          <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-semibold bg-primary/95 backdrop-blur-md text-white shadow-lg border border-white/20 transition-all duration-300 group-hover:scale-105 group-hover:shadow-xl">
-            <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
-              <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
-            </svg>
-            {occupation[0]}
-          </span>
-        )}
+
       </div>
 
       {/* MODERN: Enhanced Content Container */}
