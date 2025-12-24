@@ -79,6 +79,11 @@ const FigureCard = memo(function FigureCard({
     setIsFlipped(false);
   };
 
+  const handleManualFlip = (e) => {
+    e.stopPropagation();
+    setIsFlipped(true);
+  };
+
   const handleLikeClick = useCallback((e) => {
     e.stopPropagation();
     console.log('👍 Like clicked for:', name);
@@ -182,14 +187,13 @@ const FigureCard = memo(function FigureCard({
     >
       {/* 3D FLIP CONTAINER */}
       <div 
-        className={`relative w-full h-full transition-transform duration-700 transform-style-preserve-3d ${
-          isFlipped ? "rotate-y-180" : ""
+        className={`relative w-full h-full transition-transform duration-700 transform-style-3d ${
+          isFlipped ? "rotate-y-180" : "rotate-y-0"
         }`}
-        style={{ transformStyle: 'preserve-3d', transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
       >
         
         {/* ======================= FRONT FACE ======================= */}
-        <div className="absolute inset-0 backface-hidden rounded-xl sm:rounded-2xl overflow-hidden shadow-xl" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+        <div className="absolute inset-0 backface-hidden rounded-xl sm:rounded-2xl overflow-hidden shadow-xl">
           
           {/* Glass Overlay Ring */}
           <div className="absolute inset-0 rounded-2xl ring-0 ring-secondary/30 group-hover:ring-4 transition-all duration-500 pointer-events-none z-30"></div>
@@ -329,8 +333,7 @@ const FigureCard = memo(function FigureCard({
 
         {/* ======================= BACK FACE (Historical Context) ======================= */}
         <div 
-          className="absolute inset-0 backface-hidden rounded-xl sm:rounded-2xl overflow-hidden shadow-xl bg-white rotate-y-180 p-6 flex flex-col items-center justify-center text-center z-40 bg-gradient-to-br from-indigo-50 to-white"
-          style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+          className="absolute inset-0 backface-hidden rotate-y-180 rounded-xl sm:rounded-2xl overflow-hidden shadow-xl p-6 flex flex-col items-center justify-center text-center z-40 bg-gradient-to-br from-indigo-50 to-white"
         >
           {/* Animated Background Blob */}
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-secondary/10 rounded-full blur-2xl"></div>
