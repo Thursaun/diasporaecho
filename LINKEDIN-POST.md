@@ -10,11 +10,11 @@ This month I shipped:
 
 ✨ **Multi-Category Support** - Frederick Douglass appears in Literary Icons, Political Leaders, AND Activists because history isn't one-dimensional
 
-🔍 **Wikipedia-Only Search** - Rebuilt search architecture to query Wikipedia directly for accurate, real-time results. Find anyone from Nina Simone to Fred Hampton instantly!
+🔍 **Wikipedia-First Search** - Rebuilt search architecture to query Wikipedia directly, cleaning and verifying data against Wikidata to handle topics vs. people intelligently
 
 🃏 **3D Flip Cards** - Hover or click to reveal a figure's historical context with animated category icons, quick bio, and smooth 3D transitions
 
-⚡ **60% Faster Load Times** - Thumbnail optimization, lazy loading, code splitting, and server-side caching
+⚡ **Core Web Vitals Optimized** - Achieved instant LCP (Largest Contentful Paint) via eager loading for above-the-fold content and granular image optimization (400px thumbnails vs 5MB originals)
 
 🏆 **Smart Featured Figures** - Dynamic ranking based on real engagement: Most Liked (❤️), Most Popular (👁️ views), and Most Searched (🔍)
 
@@ -33,9 +33,9 @@ Built with React, Node.js/Express, MongoDB, and deployed on GitHub Pages + Rende
 ## Key Technical Highlights:
 
 🔧 **Smart Search Architecture**
-- Wikipedia-only search = no duplicate database entries
+- Wikipedia-only search = no duplicate database entries to manage
 - Intelligent name detection ("Nina Simone" → person search, not topic search)
-- Wikidata integration for birth/death years, occupations, awards
+- Wikidata integration for birth/death years, occupations, and awards
 
 🎨 **3D Flip Card with CSS Transforms**
 ```css
@@ -43,20 +43,19 @@ Built with React, Node.js/Express, MongoDB, and deployed on GitHub Pages + Rende
 .rotate-y-180 { transform: rotateY(180deg); }
 .backface-hidden { backface-visibility: hidden; }
 ```
-- 3-second hover trigger or instant manual flip
-- Category-specific icons (🎵 Music, 📖 Scholars, 🔥 Activists)
+- Dual-trigger system: 3-second hover delay (desktop) or manual flip button (mobile/touch)
+- Hardware-accelerated transitions for 60fps performance
 
 🏆 **Featured Figures Algorithm**
-- Tracks `views`, `likes`, and `searchHits` per figure
-- Selects unique top figure for each metric
-- Daily refresh with 24-hour caching
+- Tracks `views`, `likes`, and `searchHits` per figure across the platform
+- Selects unique top figure for each metric (no duplicates in rankings)
+- 24-hour server-side caching for efficient calculation
 
 ⚡ **Performance Stack**
-- Image thumbnails (400px vs 2000px originals)
-- React.lazy with Suspense for code splitting
-- Server-side caching with configurable TTL
-- On-demand Wikipedia fetching for detail pages
+- **LCP Optimization**: Eager loading (`priority={true}`) for the first 4 visible cards
+- **Bandwidth**: Regex-based URL rewriting to enforce 400px thumbnails (saving ~90% bandwidth)
+- **Code Splitting**: React.lazy with Suspense for non-critical routes
 
-💡 **Lesson Learned**: Interactive micro-animations (like the card flip) dramatically improve user engagement. Users explore 40% more figures when they can "peek behind the card"!
+💡 **Lesson Learned**: "Perceived performance" is just as important as actual speed. Optimistic UI updates on "Like" buttons and skeleton loaders for cards make the app feel instant even on slower networks.
 
 ---
