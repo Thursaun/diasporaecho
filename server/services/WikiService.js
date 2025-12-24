@@ -269,22 +269,29 @@ function isSearchingByTopic(searchTerm) {
   if (!searchTerm) return false;
   
   const term = searchTerm.toLowerCase();
+  
+  // FIRST: Check if it looks like a person's name (2+ capitalized words)
+  // This takes priority over topic keywords
+  const words = searchTerm.split(" ").filter((word) => word.length > 0);
+  const looksLikeName = words.length >= 2 && 
+    words.every((word) => word[0] === word[0].toUpperCase());
+  
+  if (looksLikeName) {
+    console.log(`📝 "${searchTerm}" looks like a person name - using person search`);
+    return false; // NOT a topic search
+  }
+
+  // Only check topic keywords if it doesn't look like a name
   const topicKeywords = [
-    "movement", "revolution", "rights", "history", "culture", "music", "art",
-    "education", "politics", "activism", "literature", "science", "invention"
+    "movement", "revolution", "rights", "history", "culture", "music genre", "art style",
+    "education system", "politics of", "activism in", "literature of", "science of", "inventions"
   ];
 
-  // If contains topic keywords, it's a topic search
   if (topicKeywords.some((keyword) => term.includes(keyword))) {
     return true;
   }
 
-  // Check if it looks like a person's name (2+ capitalized words)
-  const words = searchTerm.split(" ").filter((word) => word.length > 0);
-  const looksLikeName = words.length >= 2 && 
-    words.every((word) => word[0] === word[0].toUpperCase());
-
-  return !looksLikeName; // If it looks like a name, it's NOT a topic search
+  return false;
 }
 
 const searchFigures = function (params = {}) {

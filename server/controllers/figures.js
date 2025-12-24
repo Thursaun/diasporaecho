@@ -60,22 +60,80 @@ const getFigureById = (req, res, next) => {
     });
 };
 
-const getFigureByWikipediaId = (req, res, next) => {
+const getFigureByWikipediaId = async (req, res, next) => {
   const { wikipediaId } = req.params;
 
-  Figure.findOne({ wikipediaId })
-    .then((figure) => {
-      if (!figure) {
-        throw new NotFoundError(ERROR_MESSAGES.FIGURE_NOT_FOUND);
+  try {
+    // First try to find in local database
+    const figure = await Figure.findOne({ wikipediaId });
+    
+    if (figure) {
+      return res.status(200).json(figure);
+    }
+
+    // If not in DB, fetch from Wikipedia API
+    console.log(`📝 Figure ${wikipediaId} not in DB, fetching from Wikipedia...`);
+    
+    const WIKI_FETCH_OPTIONS = {
+      headers: {
+        'User-Agent': 'DiasporaEcho/1.0 (https://github.com/Thursaun/diasporaecho; Contact: developer@diasporaecho.com) fetch/1.0'
       }
-      res.status(200).json(figure);
-    })
-    .catch((err) => {
-      if (err.name === "CastError") {
-        return res.status(400).json({ message: ERROR_MESSAGES.BAD_REQUEST });
-      }
-      return res.status(500).json({ message: err.message });
-    });
+    };
+    
+    // Fetch from Wikipedia using page ID
+    const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&format=json&pageids=${wikipediaId}&prop=extracts|pageimages|info&exintro=1&explaintext=1&piprop=original|thumbnail&pithumbsize=800&inprop=url&origin=*`;
+    
+    const response = await fetch(wikiUrl, WIKI_FETCH_OPTIONS);
+    const data = await response.json();
+    
+    if (!data.query || !data.query.pages || !data.query.pages[wikipediaId]) {
+      throw new NotFoundError(ERROR_MESSAGES.FIGURE_NOT_FOUND);
+    }
+    
+    const page = data.query.pages[wikipediaId];
+    
+    if (page.missing) {
+      throw new NotFoundError(ERROR_MESSAGES.FIGURE_NOT_FOUND);
+    }
+    
+    // Format the Wikipedia data into a figure-like object
+    const figureData = {
+      _id: wikipediaId,
+      wikipediaId: wikipediaId,
+      name: page.title,
+      description: page.extract || "No description available",
+      imageUrl: page.original?.source || page.thumbnail?.source || "https://via.placeholder.com/300x400?text=No+Image",
+      years: "Unknown", // Will be extracted from description if available
+      tags: [],
+      contributions: [],
+      source: "Wikipedia",
+      sourceUrl: page.fullurl || `https://en.wikipedia.org/?curid=${wikipediaId}`,
+      likes: 0,
+      likedBy: [],
+      categories: ["Scholars & Educators"],
+      occupation: [],
+      _source: "wikipedia"
+    };
+    
+    // Extract years from description if present
+    const yearMatch = figureData.description.match(/\(([^)]*\d{4}[^)]*)\)/);
+    if (yearMatch) {
+      figureData.years = yearMatch[1];
+    }
+    
+    console.log(`✅ Fetched ${page.title} from Wikipedia`);
+    return res.status(200).json(figureData);
+    
+  } catch (err) {
+    console.error("Error fetching figure:", err);
+    if (err.name === "CastError") {
+      return res.status(400).json({ message: ERROR_MESSAGES.BAD_REQUEST });
+    }
+    if (err instanceof NotFoundError) {
+      return res.status(404).json({ message: ERROR_MESSAGES.FIGURE_NOT_FOUND });
+    }
+    return res.status(500).json({ message: err.message });
+  }
 };
 
 const saveFigure = (req, res, next) => {
