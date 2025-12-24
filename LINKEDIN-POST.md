@@ -4,7 +4,7 @@
 
 ## Short Version (for post):
 
-🚀 Excited to share major updates to **DiasporaEcho** - a platform celebrating Black historical figures!
+🚀 Excited to share major updates to **DiasporaEcho** - a platform celebrating people of color of the diaspora!
 
 This month I shipped:
 

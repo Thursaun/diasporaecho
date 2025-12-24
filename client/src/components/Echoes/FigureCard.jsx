@@ -177,30 +177,67 @@ const FigureCard = memo(function FigureCard({
       <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-secondary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl"></div>
 
       {/* MODERN: Enhanced badges with glass morphism */}
-      <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 z-20 flex flex-wrap gap-2">
-        {displayYears && (
-          <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-semibold bg-white/95 backdrop-blur-md text-gray-900 shadow-lg border border-white/20 transition-all duration-300 group-hover:scale-105 group-hover:shadow-xl">
-            <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-secondary" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-            </svg>
-            {displayYears}
-          </span>
-        )}
+      <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 z-20 flex justify-between items-start pointer-events-none">
+        
+        {/* Left Side: Years and other badges */}
+        <div className="flex flex-wrap gap-2 pointer-events-auto">
+          {displayYears && (
+            <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-semibold bg-white/95 backdrop-blur-md text-gray-900 shadow-lg border border-white/20 transition-all duration-300 group-hover:scale-105 group-hover:shadow-xl">
+              <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-secondary" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+              </svg>
+              {displayYears}
+            </span>
+          )}
+        </div>
 
+        {/* Right Side: Heart Like Button (New Position) */}
+        <button
+          onClick={handleLikeClick}
+          className={`pointer-events-auto group/heart flex flex-col items-center gap-0.5 sm:gap-1 transition-all duration-300 ${
+            isLiked ? "scale-110" : "opacity-90 hover:opacity-100 hover:scale-110"
+          }`}
+          aria-label={isLiked ? `Unlike ${name}` : `Like ${name}`}
+        >
+          <div className={`p-2 sm:p-2.5 rounded-full backdrop-blur-md shadow-lg border transition-all duration-300 ${
+            isLiked 
+              ? "bg-secondary text-white border-secondary" 
+              : "bg-white/20 text-white border-white/20 hover:bg-white/30"
+          }`}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill={isLiked ? "currentColor" : "none"}
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-4 h-4 sm:w-5 sm:h-5"
+            >
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+          </div>
+          <span className={`text-[10px] sm:text-xs font-bold drop-shadow-md px-2 py-0.5 rounded-full backdrop-blur-sm ${
+            isLiked ? "text-white bg-secondary/80" : "text-white bg-black/40"
+          }`}>
+            {likes}
+          </span>
+        </button>
       </div>
 
       {/* MODERN: Enhanced Content Container */}
       <div className="content absolute inset-0 flex flex-col p-3 sm:p-4 md:p-6 z-10 pt-10 sm:pt-12 md:pt-14">
         {/* MODERN: Enhanced Header Section with gradient backdrop */}
-        <div className="flex flex-col items-start gap-1 sm:gap-2 mb-2 sm:mb-3 md:mb-4">
+        <div className="flex flex-col items-start gap-1 sm:gap-2 mb-2 sm:mb-3 md:mb-4 mt-auto"> {/* Pushed content down */}
           <h2 className="text-base sm:text-lg md:text-xl font-bold text-white bg-gradient-to-r from-black/60 to-black/40 backdrop-blur-md px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded-lg sm:rounded-xl shadow-lg line-clamp-2 border border-white/10 transition-all duration-300 group-hover:border-white/20">
             {name}
           </h2>
         </div>
 
         {/* MODERN: Enhanced Description with fade effect */}
-        <div className="flex-1 mb-2 sm:mb-3 opacity-0 translate-y-6 transition-all duration-600 ease-out group-hover:opacity-100 group-hover:translate-y-0">
-          <p className="text-white/95 text-xs sm:text-sm leading-relaxed line-clamp-4 sm:line-clamp-5 md:line-clamp-6 drop-shadow-md">
+        <div className="flex-1 mb-2 sm:mb-3 opacity-0 translate-y-6 transition-all duration-600 ease-out group-hover:opacity-100 group-hover:translate-y-0 hidden"> 
+          {/* Hidden description for cleaner look on card, or keep? Kept hidden or minimal */}
+           <p className="text-white/95 text-xs sm:text-sm leading-relaxed line-clamp-4 sm:line-clamp-5 md:line-clamp-6 drop-shadow-md">
             {description}
           </p>
         </div>
@@ -230,7 +267,7 @@ const FigureCard = memo(function FigureCard({
         )}
 
         {/* MODERN: Enhanced Bottom Actions with glass morphism */}
-        <div className="flex justify-between items-end gap-1.5 sm:gap-2 md:gap-3 opacity-0 translate-y-6 transition-all duration-600 delay-100 ease-out group-hover:opacity-100 group-hover:translate-y-0">
+        <div className="flex justify-between items-end gap-1.5 sm:gap-2 md:gap-3 opacity-0 translate-y-6 transition-all duration-600 delay-100 ease-out group-hover:opacity-100 group-hover:translate-y-0 w-full">
           <div className="hidden sm:flex items-center gap-1.5 text-xs text-white/80 bg-black/30 backdrop-blur-md px-2 sm:px-3 py-1.5 rounded-lg flex-shrink-0 border border-white/10">
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
@@ -241,33 +278,8 @@ const FigureCard = memo(function FigureCard({
           <div className="flex gap-1.5 sm:gap-2 items-center ml-auto sm:ml-0">
             {isLoggedIn ? (
               <>
-                <button
-                  onClick={handleLikeClick}
-                  className={`group/btn inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-all duration-300 shadow-sm hover:shadow-md min-h-[44px] sm:min-h-0 ${
-                    isLiked
-                      ? "bg-secondary text-white border border-secondary hover:bg-secondary/90"
-                      : "bg-white/15 backdrop-blur-md text-white border border-white/20 hover:bg-white/25 hover:border-white/30"
-                  }`}
-                  aria-label={isLiked ? `Unlike ${name}` : `Like ${name}`}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill={isLiked ? "currentColor" : "none"}
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="transition-transform group-hover/btn:scale-110 sm:w-[14px] sm:h-[14px]"
-                  >
-                    <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
-                  </svg>
-                  <span className="hidden xs:inline">{isLiked ? `Liked (${likes})` : `Like (${likes})`}</span>
-                  <span className="xs:hidden">{likes}</span>
-                </button>
-
+                {/* Like button moved to top-right, removed here */}
+                
                 <button
                   onClick={handleSaveClick}
                   className={`group/btn inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3.5 py-2 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-all duration-300 shadow-sm hover:shadow-md min-h-[44px] sm:min-h-0 ${
