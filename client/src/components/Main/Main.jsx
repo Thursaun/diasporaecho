@@ -263,8 +263,15 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
                   } mx-auto w-full max-w-sm`}
                 >
                   <div className="relative">
-                    {!searchQuery && index < 3 && (
-                      <div className="absolute -top-2 -right-2 z-10">
+                    <FigureCard
+                      figure={figure}
+                      onLikeFigureClick={handleLikeClick}
+                      onSaveFigureClick={onSaveFigureClick}
+                      onLoginClick={onLoginClick}
+                      isSaved={checkIsSaved(figure)}
+                      isLiked={checkIsLiked(figure)}
+                      priority={true}
+                      badge={!searchQuery && index < 3 ? (
                         <div className={`px-3 py-1 rounded-full text-white text-xs font-bold shadow-lg ${
                           index === 0 ? 'bg-yellow-500' :
                           index === 1 ? 'bg-gray-400' :
@@ -274,16 +281,7 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
                            index === 1 ? '🥈 Popular' :
                            '🥉 Featured'}
                         </div>
-                      </div>
-                    )}
-                    <FigureCard
-                      figure={figure}
-                      onLikeFigureClick={handleLikeClick}
-                      onSaveFigureClick={onSaveFigureClick}
-                      onLoginClick={onLoginClick}
-                      isSaved={checkIsSaved(figure)}
-                      isLiked={checkIsLiked(figure)}
-                      priority={true}
+                      ) : null}
                     />
                   </div>
                 </div>

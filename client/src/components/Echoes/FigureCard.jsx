@@ -15,6 +15,7 @@ const FigureCard = memo(function FigureCard({
   isLiked,
   onLoginClick,
   priority = false, // PERFORMANCE: Priority loading for above-the-fold images
+  badge = null, // New prop for external badges (e.g., Featured, Rank)
 }) {
   // =============================================================================
   // HOOKS & STATE: Optimized for performance
@@ -191,38 +192,47 @@ const FigureCard = memo(function FigureCard({
           )}
         </div>
 
-        {/* Right Side: Heart Like Button (New Position) */}
-        <button
-          onClick={handleLikeClick}
-          className={`pointer-events-auto group/heart flex flex-col items-center gap-0.5 sm:gap-1 transition-all duration-300 ${
-            isLiked ? "scale-110" : "opacity-90 hover:opacity-100 hover:scale-110"
-          }`}
-          aria-label={isLiked ? `Unlike ${name}` : `Like ${name}`}
-        >
-          <div className={`p-2 sm:p-2.5 rounded-full backdrop-blur-md shadow-lg border transition-all duration-300 ${
-            isLiked 
-              ? "bg-secondary text-white border-secondary" 
-              : "bg-white/20 text-white border-white/20 hover:bg-white/30"
-          }`}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill={isLiked ? "currentColor" : "none"}
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-4 h-4 sm:w-5 sm:h-5"
-            >
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-            </svg>
-          </div>
-          <span className={`text-[10px] sm:text-xs font-bold drop-shadow-md px-2 py-0.5 rounded-full backdrop-blur-sm ${
-            isLiked ? "text-white bg-secondary/80" : "text-white bg-black/40"
-          }`}>
-            {likes}
-          </span>
-        </button>
+        {/* Right Side: Badge + Heart Like Button */}
+        <div className="flex flex-col items-end gap-2 pointer-events-auto">
+          {/* Render External Badge if Provided */}
+          {badge && (
+            <div className="mb-0.5">
+              {badge}
+            </div>
+          )}
+
+          <button
+            onClick={handleLikeClick}
+            className={`group/heart flex flex-col items-center gap-0.5 sm:gap-1 transition-all duration-300 ${
+              isLiked ? "scale-110" : "opacity-90 hover:opacity-100 hover:scale-110"
+            }`}
+            aria-label={isLiked ? `Unlike ${name}` : `Like ${name}`}
+          >
+            <div className={`p-2 sm:p-2.5 rounded-full backdrop-blur-md shadow-lg border transition-all duration-300 ${
+              isLiked 
+                ? "bg-secondary text-white border-secondary" 
+                : "bg-white/20 text-white border-white/20 hover:bg-white/30"
+            }`}>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill={isLiked ? "currentColor" : "none"}
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-4 h-4 sm:w-5 sm:h-5"
+              >
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
+            </div>
+            <span className={`text-[10px] sm:text-xs font-bold drop-shadow-md px-2 py-0.5 rounded-full backdrop-blur-sm ${
+              isLiked ? "text-white bg-secondary/80" : "text-white bg-black/40"
+            }`}>
+              {likes}
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* MODERN: Enhanced Content Container */}
