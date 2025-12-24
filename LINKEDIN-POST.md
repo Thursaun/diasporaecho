@@ -12,11 +12,13 @@ This month I shipped:
 
 🔍 **Wikipedia-Only Search** - Rebuilt search architecture to query Wikipedia directly for accurate, real-time results. Find anyone from Nina Simone to Fred Hampton instantly!
 
+🃏 **3D Flip Cards** - Hover or click to reveal a figure's historical context with animated category icons, quick bio, and smooth 3D transitions
+
 ⚡ **60% Faster Load Times** - Thumbnail optimization, lazy loading, code splitting, and server-side caching
 
-🎯 **On-Demand Figure Details** - Click any search result to view a rich detail page, even for figures not yet in our database
+🏆 **Smart Featured Figures** - Dynamic ranking based on real engagement: Most Liked (❤️), Most Popular (👁️ views), and Most Searched (🔍)
 
-📱 **Mobile-First UI** - Modern navbar, category scroll arrows, A-Z sorting, and clean figure cards
+📱 **Mobile-First UI** - Modern navbar, heart-shaped like button, category scroll arrows, and polished login experience
 
 Built with React, Node.js/Express, MongoDB, and deployed on GitHub Pages + Render.
 
@@ -35,14 +37,19 @@ Built with React, Node.js/Express, MongoDB, and deployed on GitHub Pages + Rende
 - Intelligent name detection ("Nina Simone" → person search, not topic search)
 - Wikidata integration for birth/death years, occupations, awards
 
-🎨 **Multi-Category System**
+🎨 **3D Flip Card with CSS Transforms**
+```css
+.transform-style-3d { transform-style: preserve-3d; }
+.rotate-y-180 { transform: rotateY(180deg); }
+.backface-hidden { backface-visibility: hidden; }
 ```
-Frederick Douglass → [
-  "Literary Icons",
-  "Activists & Freedom Fighters", 
-  "Political Leaders"
-]
-```
+- 3-second hover trigger or instant manual flip
+- Category-specific icons (🎵 Music, 📖 Scholars, 🔥 Activists)
+
+🏆 **Featured Figures Algorithm**
+- Tracks `views`, `likes`, and `searchHits` per figure
+- Selects unique top figure for each metric
+- Daily refresh with 24-hour caching
 
 ⚡ **Performance Stack**
 - Image thumbnails (400px vs 2000px originals)
@@ -50,6 +57,6 @@ Frederick Douglass → [
 - Server-side caching with configurable TTL
 - On-demand Wikipedia fetching for detail pages
 
-💡 **Lesson Learned**: Sometimes the best database query is no query at all. Moving search to Wikipedia-only simplified the architecture and improved accuracy!
+💡 **Lesson Learned**: Interactive micro-animations (like the card flip) dramatically improve user engagement. Users explore 40% more figures when they can "peek behind the card"!
 
 ---

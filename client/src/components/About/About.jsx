@@ -104,24 +104,34 @@ function AboutUs({ onRegisterClick }) {
 
       <section className="py-16 w-full">
         <div className="container mx-auto px-4 md:px-6">
-          <h2 className="text-3xl font-bold mb-6 text-gray-900 w-full">
-            Acknowledgements
-          </h2>
-          <p className="text-lg text-gray-700 w-full">
-            Diaspora Echo is made possible through the Wikipedia&apos;s Open
-            Access API, which provides access to the rich collections of the
-            National Museum of African American History & Culture.
-          </p>
-       
-        <div className="bg-gray-200 p-6 rounded-lg w-full max-w-3xl">
-          <p className="italic text-gray-700 w-full">
-            {" "}
-            &ldquo;We acknowledge and honor the historical figures whose stories
-            we share, and recognize our responsibility to present their
-            contributions with accuracy, respect, and the reverence they
-            deserve.&ldquo;
-          </p>
-        </div>
+          <div className="flex flex-col md:flex-row gap-12 items-center w-full">
+            <div className="md:w-1/2 w-full">
+              <h2 className="text-3xl font-bold mb-6 text-gray-900 w-full">
+                Acknowledgements
+              </h2>
+              <p className="text-lg text-gray-700 w-full">
+                Diaspora Echo exists to combat the systematic erasure of Black history 
+                and the contributions of people of color. For too long, these stories have 
+                been minimized, forgotten, or deliberately removed from mainstream narratives.
+              </p>
+              <p className="text-lg text-gray-700 mt-4 w-full">
+                We leverage Wikipedia&apos;s Open Access resources to ensure these vital 
+                stories remain accessible, discoverable, and celebrated. Every figure 
+                we highlight is a step toward reclaiming the full richness of our shared history.
+              </p>
+            </div>
+            <div className="md:w-1/2 w-full bg-gray-200 rounded-lg p-6">
+              <blockquote className="text-xl italic text-gray-800 border-l-4 border-secondary pl-4 w-full">
+                &ldquo;We acknowledge and honor the historical figures whose stories 
+                we share. We recognize our responsibility to present their contributions 
+                with accuracy, respect, and the reverence they deserve—because their 
+                legacies must never be erased.&rdquo;
+                <footer className="text-right mt-4 text-gray-600 not-italic font-semibold">
+                  — The DiasporaEcho Team
+                </footer>
+              </blockquote>
+            </div>
+          </div>
         </div>
       </section>
     </div>
