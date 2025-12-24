@@ -65,7 +65,7 @@ const getFigureByWikipediaId = async (req, res, next) => {
 
   try {
     // First try to find in local database
-    const figure = await Figure.findOne({ wikipediaId });
+    let figure = await Figure.findOne({ wikipediaId });
     
     if (figure) {
       return res.status(200).json(figure);
@@ -96,14 +96,22 @@ const getFigureByWikipediaId = async (req, res, next) => {
       throw new NotFoundError(ERROR_MESSAGES.FIGURE_NOT_FOUND);
     }
     
-    // Format the Wikipedia data into a figure-like object
-    const figureData = {
-      _id: wikipediaId,
+    // Extract years from description if present
+    let years = "Unknown";
+    const yearMatch = (page.extract || "").match(/\(([^)]*\d{4}[^)]*)\)/);
+    if (yearMatch) {
+      years = yearMatch[1];
+    }
+    
+    // AUTO-SAVE: Create new figure in database for future interactions
+    console.log(`💾 Auto-saving ${page.title} to database...`);
+    
+    const newFigure = new Figure({
       wikipediaId: wikipediaId,
       name: page.title,
       description: page.extract || "No description available",
       imageUrl: page.original?.source || page.thumbnail?.source || "https://via.placeholder.com/300x400?text=No+Image",
-      years: "Unknown", // Will be extracted from description if available
+      years: years,
       tags: [],
       contributions: [],
       source: "Wikipedia",
@@ -112,17 +120,37 @@ const getFigureByWikipediaId = async (req, res, next) => {
       likedBy: [],
       categories: ["Scholars & Educators"],
       occupation: [],
-      _source: "wikipedia"
-    };
+      owners: []
+    });
     
-    // Extract years from description if present
-    const yearMatch = figureData.description.match(/\(([^)]*\d{4}[^)]*)\)/);
-    if (yearMatch) {
-      figureData.years = yearMatch[1];
+    try {
+      figure = await newFigure.save();
+      console.log(`✅ Auto-saved ${page.title} to database with ID: ${figure._id}`);
+    } catch (saveErr) {
+      console.warn(`⚠️ Could not auto-save figure (may already exist):`, saveErr.message);
+      // Try to find it again in case of race condition
+      figure = await Figure.findOne({ wikipediaId });
+      if (figure) {
+        return res.status(200).json(figure);
+      }
+      // Return unsaved version if save failed
+      return res.status(200).json({
+        _id: wikipediaId,
+        wikipediaId: wikipediaId,
+        name: page.title,
+        description: page.extract || "No description available",
+        imageUrl: page.original?.source || page.thumbnail?.source,
+        years: years,
+        source: "Wikipedia",
+        sourceUrl: page.fullurl,
+        likes: 0,
+        likedBy: [],
+        categories: ["Scholars & Educators"],
+        _source: "wikipedia"
+      });
     }
     
-    console.log(`✅ Fetched ${page.title} from Wikipedia`);
-    return res.status(200).json(figureData);
+    return res.status(200).json(figure);
     
   } catch (err) {
     console.error("Error fetching figure:", err);
