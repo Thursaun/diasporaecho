@@ -15,24 +15,22 @@ A modern full-stack web application celebrating the contributions of historical 
 - **Vite** - Fast build tool and development server
 - **Tailwind CSS** - Utility-first CSS framework for responsive design
 - **Context API** - State management for user authentication
-- **Fetch API** - HTTP client for backend communication
+- **Intersection Observer** - Efficient lazy loading of images
 
 ### Backend
 - **Node.js** - JavaScript runtime environment
 - **Express.js** - Web application framework
-- **MongoDB** - NoSQL database with Mongoose ODM
+- **MongoDB** - NoSQL database with Mongoose ODM (Text Search enabled)
+- **Wikipedia Action API** - Real-time data fetching
+- **Wikidata API** - Structured metadata integration
 - **JSON Web Tokens (JWT)** - Secure user authentication
-- **bcryptjs** - Password hashing and security
-- **Helmet** - Security middleware
-- **CORS** - Cross-origin resource sharing
-- **Express Rate Limit** - API rate limiting
+- **Redis/In-Memory Cache** - Server-side caching strategy
 
 ### DevOps & Tools
 - **GitHub Actions** - CI/CD pipeline for automated deployment
 - **GitHub Pages** - Static site hosting
 - **MongoDB Atlas** - Cloud database hosting
 - **ESLint** - Code linting and quality assurance
-- **Prettier** - Code formatting
 
 ## 📁 Project Architecture
 
@@ -42,11 +40,11 @@ diasporaecho/
 │   ├── src/
 │   │   ├── components/     # Reusable React components
 │   │   │   ├── App/        # Main application component
-│   │   │   ├── Echoes/     # Figure gallery and detail views
+│   │   │   ├── Echoes/     # Gallery with 3D Flip Cards
 │   │   │   ├── Form/       # Authentication forms
 │   │   │   └── Profile/    # User profile management
 │   │   ├── contexts/       # React Context providers
-│   │   ├── utils/          # API utilities and constants
+│   │   ├── utils/          # Image optimization & API helpers
 │   │   └── index.css       # Tailwind CSS imports
 │   ├── public/             # Static assets
 │   ├── vite.config.js      # Vite configuration
@@ -55,8 +53,7 @@ diasporaecho/
 │   ├── controllers/        # Route handlers and business logic
 │   ├── models/             # Mongoose schemas
 │   ├── routes/             # Express route definitions
-│   ├── middlewares/        # Custom middleware functions
-│   ├── services/           # External API integrations
+│   ├── services/           # WikiService & FeaturedFiguresService
 │   ├── config/             # Configuration files
 │   └── app.js              # Express application setup
 ├── .github/workflows/      # GitHub Actions CI/CD
@@ -65,30 +62,27 @@ diasporaecho/
 
 ## 🔧 Key Features & Implementation
 
-### React Features Demonstrated
-- **Functional Components with Hooks** - useState, useEffect, useContext
-- **Custom Hooks** - Reusable logic for API calls and authentication
-- **Context API** - Global state management for user authentication
-- **React Router** - SPA navigation with protected routes
-- **Conditional Rendering** - Dynamic UI based on authentication state
-- **Component Composition** - Modular, reusable component architecture
-- **Event Handling** - User interactions and form submissions
-- **Props & State Management** - Data flow and component communication
+### 🌟 Interactive UI/UX
+- **3D Flip Cards**: Hardware-accelerated CSS transforms enable interactive cards that flip on hover (3s delay) or manual click to reveal historical context.
+- **Micro-Animations**: Smooth transitions, hover states, and glassmorphism effects using Tailwind utilities.
+- **Smart Featured Figures**: Dynamic ranking algorithm that highlights figures based on **Likes**, **Views**, and **Search Hits**.
+- **Responsive Layouts**: Mobile-first design with touch-friendly navigation and scrollable category tabs.
 
-### Backend Features
-- **RESTful API Design** - CRUD operations for users and figures
-- **JWT Authentication** - Secure user sessions
-- **MongoDB Integration** - Document-based data storage
-- **Input Validation** - Request validation and sanitization
-- **Error Handling** - Comprehensive error management
-- **Security Implementation** - CORS, Helmet, rate limiting
+### 🔍 Advanced Search Architecture
+- **Wikipedia-First Strategy**: Hybrid search engine that queries Wikipedia directly for "limitless" discovery, normalizing data on the fly.
+- **Smart Categorization**: Automatically maps Wikidata occupations (e.g., "Suffragist") to project categories (e.g., "Activists & Freedom Fighters").
+- **Local Fallback**: Seamlessly blends cached local data with real-time external results.
 
-### User Experience
-- **Responsive Design** - Mobile-first approach with Tailwind CSS
-- **Search & Filter** - Dynamic content discovery
-- **User Authentication** - Secure registration and login
-- **Personal Collections** - Save and organize favorite figures
-- **Interactive UI** - Like system and user engagement features
+### ⚡ Performance Optimization
+- **LCP Optimization**: "Eager Loading" strategy for above-the-fold content (`priority={true}`) ensures instant visual feedback.
+- **Image Optimization Pipeline**: Regex-based utility intercepts Wikipedia URLs to request dynamic, optimized thumbnails (400px) instead of 5MB+ originals.
+- **Lazy Loading**: `IntersectionObserver` defers loading of off-screen images until necessary.
+- **Server Caching**: In-memory LRU caching prevents API rate limits and reduces latency.
+
+### 🔐 Security & User Features
+- **JWT Authentication**: Secure stateless session management.
+- **Personal Collections**: Authenticated users can "Save" figures to their profile.
+- **Optimistic UI**: "Like" and "Save" actions update instantly on the client for perceived speed.
 
 ## 🚦 Getting Started
 
@@ -142,10 +136,6 @@ cd client
 npm run dev
 ```
 
-Application runs at:
-- Frontend: `http://localhost:3001`
-- Backend: `http://localhost:3000`
-
 ## 🧪 API Endpoints
 
 ### Authentication
@@ -154,9 +144,9 @@ Application runs at:
 - `GET /api/users/me` - Get current user profile
 
 ### Figures
-- `GET /api/figures` - Retrieve all historical figures
-- `GET /api/figures/search` - Search figures by query
-- `GET /api/figures/:id` - Get specific figure details
+- `GET /api/figures?category=...` - Retrieve figures (supports pagination)
+- `GET /api/figures/search?query=...` - Search Wikipedia & Local DB
+- `GET /api/figures/:id` - Get specific figure details (auto-fetches from Wiki if missing)
 - `POST /api/figures/:id/like` - Like a figure (authenticated)
 
 ### User Collections
@@ -164,53 +154,13 @@ Application runs at:
 - `POST /api/users/me/saved` - Save a figure to collection
 - `DELETE /api/users/figures/:id` - Remove figure from collection
 
-## 🎯 Technical Highlights
-
-### React Best Practices
-- Component-based architecture with clear separation of concerns
-- Custom hooks for API integration and state management
-- Context API for global state without prop drilling
-- Conditional rendering for dynamic user experiences
-- Form handling with controlled components
-
-### Performance Optimizations
-- Vite for fast development and optimized builds
-- Code splitting with React.lazy (if implemented)
-- Efficient re-rendering with proper dependency arrays
-- Responsive images and lazy loading
-
-### Security Implementation
-- JWT-based authentication with secure token storage
-- Input validation and sanitization
-- CORS configuration for secure cross-origin requests
-- Rate limiting to prevent API abuse
-- Password hashing with bcrypt
-
 ## 🚀 Deployment
 
 The application uses a modern CI/CD pipeline:
 
 1. **GitHub Actions** automatically builds and deploys the frontend to GitHub Pages
-2. **Backend** can be deployed to services like Railway, Render, or Vercel
+2. **Backend** deployed on Render/Railway
 3. **Database** hosted on MongoDB Atlas cloud platform
-
-## 💡 Future Enhancements
-
-- [ ] Advanced search with filters (time period, category, location)
-- [ ] User comments and reviews system
-- [ ] Social sharing capabilities
-- [ ] Progressive Web App (PWA) features
-- [ ] Internationalization (i18n) support
-- [ ] Unit and integration testing with Jest/React Testing Library
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
 
 ## 👨‍💻 Developer
 
