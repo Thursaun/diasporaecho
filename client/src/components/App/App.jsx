@@ -201,7 +201,7 @@ const App = () => {
   }
 };
 
-  const handleLikeFigureClick = (figure) => {
+  const handleLikeFigureClick = async (figure) => {
   if (!loggedIn) {
     setPendingLikeAction(figure);
     openModal("login");
@@ -216,6 +216,20 @@ const App = () => {
   }
 
   console.log("Liking figure with ID:", figureId);
+
+  // If this is a Wikipedia-only figure (not saved to DB yet), save it first
+  if (figure._source === 'wikipedia') {
+    console.log("Figure is from Wikipedia, saving to DB first...");
+    try {
+      const savedFig = await saveFigure(figure);
+      console.log("✅ Figure saved to DB:", savedFig.name);
+      // Update figure reference with saved version
+      figure = savedFig;
+    } catch (err) {
+      console.error("❌ Error saving figure before like:", err);
+      // Continue trying to like anyway - might already exist
+    }
+  }
 
   return likeFigure(figureId)
     .then((updatedFigure) => {
