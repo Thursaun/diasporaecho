@@ -469,7 +469,7 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
               Showing {currentFigures.length} of {categorizedFigures[activeCategory]?.length || 0} figures
               {activeCategory !== "all" && ` in ${activeCategory}`}
             </div>
-            {process.env.NODE_ENV === 'development' && (
+            {import.meta.env.DEV && (
               <div className="text-xs text-gray-400">
                 💡 Dev Mode: Total cached figures: {allFigures.length}
               </div>
