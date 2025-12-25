@@ -275,7 +275,7 @@ const FigureCard = memo(function FigureCard({
             </div>
             <div className="flex flex-col items-end gap-2 pointer-events-auto">
                {badge && <div className="mb-0.5">{badge}</div>}
-               <button onClick={handleLikeClick} onMouseEnter={handleButtonMouseEnter} onMouseLeave={handleButtonMouseLeave} className={`flex flex-col items-center gap-1 transition-all duration-300 ${isLiked ? "scale-110" : "opacity-90 hover:scale-110"}`}>
+               <button onClick={handleLikeClick} onMouseEnter={handleButtonMouseEnter} onMouseLeave={handleButtonMouseLeave} className={`flex flex-col items-center gap-1 transition-all duration-150 ${isLiked ? "scale-110" : "opacity-90 hover:scale-110"}`}>
                   <div className={`p-2.5 rounded-full shadow-lg border ${isLiked ? "bg-secondary text-white border-secondary" : "bg-white/20 text-white border-white/20"}`}>
                      <svg viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" className="w-5 h-5">
                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
@@ -329,7 +329,7 @@ const FigureCard = memo(function FigureCard({
                        onClick={handleSaveClick}
                        onMouseEnter={handleButtonMouseEnter}
                        onMouseLeave={handleButtonMouseLeave}
-                       className={`group/btn inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3.5 py-2 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-all duration-300 shadow-sm hover:shadow-md min-h-[44px] sm:min-h-0 ${
+                       className={`group/btn inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3.5 py-2 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-all duration-150 shadow-sm hover:shadow-md min-h-[44px] sm:min-h-0 ${
                          isSaved
                            ? "bg-white text-gray-900 border border-white hover:bg-white/90"
                            : "bg-white/15 backdrop-blur-md text-white border border-white/20 hover:bg-white/25 hover:border-white/30"
