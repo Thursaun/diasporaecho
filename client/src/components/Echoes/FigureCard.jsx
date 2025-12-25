@@ -59,17 +59,46 @@ const FigureCard = memo(function FigureCard({
   // PERFORMANCE IMPROVEMENT: Memoized Event Handlers
   // =============================================================================
   
-  const handleMouseEnter = () => {
-    hoverTimerRef.current = setTimeout(() => {
-      setIsFlipped(true);
-    }, 3000);
+  // Track if we're over an interactive element (buttons)
+  const isOverButtonRef = useRef(false);
+
+  const startFlipTimer = () => {
+    // Only start timer if not already running and not over a button
+    if (!hoverTimerRef.current && !isOverButtonRef.current) {
+      hoverTimerRef.current = setTimeout(() => {
+        setIsFlipped(true);
+      }, 3000);
+    }
   };
 
-  const handleMouseLeave = () => {
+  const clearFlipTimer = () => {
     if (hoverTimerRef.current) {
       clearTimeout(hoverTimerRef.current);
       hoverTimerRef.current = null;
     }
+  };
+
+  const handleMouseEnter = () => {
+    startFlipTimer();
+  };
+
+  const handleMouseLeave = () => {
+    clearFlipTimer();
+    isOverButtonRef.current = false;
+  };
+
+  // When entering a button, clear the timer and mark that we're over a button
+  const handleButtonMouseEnter = (e) => {
+    e.stopPropagation();
+    isOverButtonRef.current = true;
+    clearFlipTimer();
+  };
+
+  // When leaving a button back to the card, restart the timer
+  const handleButtonMouseLeave = (e) => {
+    e.stopPropagation();
+    isOverButtonRef.current = false;
+    startFlipTimer();
   };
 
   const handleFlipBack = (e) => {
@@ -246,7 +275,7 @@ const FigureCard = memo(function FigureCard({
             </div>
             <div className="flex flex-col items-end gap-2 pointer-events-auto">
                {badge && <div className="mb-0.5">{badge}</div>}
-               <button onClick={handleLikeClick} className={`flex flex-col items-center gap-1 transition-all duration-300 ${isLiked ? "scale-110" : "opacity-90 hover:scale-110"}`}>
+               <button onClick={handleLikeClick} onMouseEnter={handleButtonMouseEnter} onMouseLeave={handleButtonMouseLeave} className={`flex flex-col items-center gap-1 transition-all duration-300 ${isLiked ? "scale-110" : "opacity-90 hover:scale-110"}`}>
                   <div className={`p-2.5 rounded-full shadow-lg border ${isLiked ? "bg-secondary text-white border-secondary" : "bg-white/20 text-white border-white/20"}`}>
                      <svg viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" className="w-5 h-5">
                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
@@ -283,6 +312,8 @@ const FigureCard = memo(function FigureCard({
                   {/* MANUAL FLIP BUTTON */}
                   <button
                      onClick={handleManualFlip}
+                     onMouseEnter={handleButtonMouseEnter}
+                     onMouseLeave={handleButtonMouseLeave}
                      className="group/btn inline-flex items-center justify-center w-[44px] h-[44px] sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 bg-white/10 backdrop-blur-md text-white rounded-lg border border-white/20 hover:bg-white/20 hover:border-white/30 transition-all duration-300 shadow-sm"
                      aria-label="View Info"
                      title="View Info"
@@ -296,6 +327,8 @@ const FigureCard = memo(function FigureCard({
                    <>
                      <button
                        onClick={handleSaveClick}
+                       onMouseEnter={handleButtonMouseEnter}
+                       onMouseLeave={handleButtonMouseLeave}
                        className={`group/btn inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3.5 py-2 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-all duration-300 shadow-sm hover:shadow-md min-h-[44px] sm:min-h-0 ${
                          isSaved
                            ? "bg-white text-gray-900 border border-white hover:bg-white/90"
@@ -323,6 +356,8 @@ const FigureCard = memo(function FigureCard({
                  ) : (
                    <button
                      onClick={handleLoginClick}
+                     onMouseEnter={handleButtonMouseEnter}
+                     onMouseLeave={handleButtonMouseLeave}
                      className="group/btn inline-flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 bg-white/15 backdrop-blur-md text-white rounded-lg border border-white/20 hover:bg-white/25 hover:border-white/30 transition-all duration-300 text-[10px] sm:text-xs font-semibold shadow-sm hover:shadow-md min-h-[44px] sm:min-h-0"
                      aria-label="Sign in to interact with figures"
                    >
