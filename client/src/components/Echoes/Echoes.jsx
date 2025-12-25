@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getFigures } from '../../utils/api';
 import LazyFigureCard from './LazyFigureCard';
 
@@ -34,33 +34,7 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
   const [error, setError] = useState(null);
   const [activeCategory, setActiveCategory] = useState("all");
   const [displayCount, setDisplayCount] = useState(INITIAL_LOAD);
-  
-  // Scroll arrows state
-  const categoryScrollRef = useRef(null);
-  const [showLeftArrow, setShowLeftArrow] = useState(false);
-  const [showRightArrow, setShowRightArrow] = useState(true);
-  
-  // Check scroll position to show/hide arrows
-  const handleCategoryScroll = useCallback(() => {
-    const container = categoryScrollRef.current;
-    if (!container) return;
-    
-    const { scrollLeft, scrollWidth, clientWidth } = container;
-    setShowLeftArrow(scrollLeft > 10);
-    setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
-  }, []);
-  
-  // Scroll category tabs
-  const scrollCategories = useCallback((direction) => {
-    const container = categoryScrollRef.current;
-    if (!container) return;
-    
-    const scrollAmount = 200;
-    container.scrollBy({ 
-      left: direction === 'left' ? -scrollAmount : scrollAmount, 
-      behavior: 'smooth' 
-    });
-  }, []);
+  const [searchQuery, setSearchQuery] = useState(""); // Filter figures by name
 
   // =============================================================================
   // PERFORMANCE IMPROVEMENT: Optimized like handler with local state update
@@ -164,19 +138,42 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
     return categorized;
   }, [allFigures]);
 
-  // PERFORMANCE: Get current figures to display with pagination
+  // PERFORMANCE: Get current figures to display with pagination and search filter
   const currentFigures = useMemo(() => {
     const categoryFigures = categorizedFigures[activeCategory] || [];
-    const sliced = categoryFigures.slice(0, displayCount);
-    console.log(`📊 Displaying ${sliced.length} of ${categoryFigures.length} figures in category: ${activeCategory}`);
+    
+    // Filter by search query if provided
+    const filtered = searchQuery.trim()
+      ? categoryFigures.filter(fig => {
+          const query = searchQuery.toLowerCase();
+          return (
+            fig.name?.toLowerCase().includes(query) ||
+            fig.description?.toLowerCase().includes(query) ||
+            fig.tags?.some(tag => tag.toLowerCase().includes(query))
+          );
+        })
+      : categoryFigures;
+    
+    const sliced = filtered.slice(0, displayCount);
+    console.log(`📊 Displaying ${sliced.length} of ${filtered.length} figures (category: ${activeCategory}, search: "${searchQuery}")`);
     return sliced;
-  }, [categorizedFigures, activeCategory, displayCount]);
+  }, [categorizedFigures, activeCategory, displayCount, searchQuery]);
 
-  // PERFORMANCE: Check if more figures can be loaded
+  // PERFORMANCE: Check if more figures can be loaded (accounting for search filter)
   const hasMoreFigures = useMemo(() => {
     const categoryFigures = categorizedFigures[activeCategory] || [];
-    return displayCount < categoryFigures.length;
-  }, [categorizedFigures, activeCategory, displayCount]);
+    const filtered = searchQuery.trim()
+      ? categoryFigures.filter(fig => {
+          const query = searchQuery.toLowerCase();
+          return (
+            fig.name?.toLowerCase().includes(query) ||
+            fig.description?.toLowerCase().includes(query) ||
+            fig.tags?.some(tag => tag.toLowerCase().includes(query))
+          );
+        })
+      : categoryFigures;
+    return displayCount < filtered.length;
+  }, [categorizedFigures, activeCategory, displayCount, searchQuery]);
 
   // =============================================================================
   // PERFORMANCE IMPROVEMENT: Optimized Helper Functions
@@ -281,82 +278,92 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
           )}
         </div>
 
-      {/* PERFORMANCE: Optimized Category Navigation with scroll arrows */}
-      <div className="mb-6 sm:mb-8 relative">
-        {/* Left scroll arrow */}
-        {showLeftArrow && (
-          <button
-            onClick={() => scrollCategories('left')}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 shadow-md rounded-full p-1.5 hover:bg-gray-100 transition-all"
-            aria-label="Scroll left"
-          >
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-        )}
-        
-        {/* Right scroll arrow */}
-        {showRightArrow && (
-          <button
-            onClick={() => scrollCategories('right')}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 shadow-md rounded-full p-1.5 hover:bg-gray-100 transition-all"
-            aria-label="Scroll right"
-          >
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        )}
-        
-        <div 
-          ref={categoryScrollRef}
-          onScroll={handleCategoryScroll}
-          className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide"
-        >
-          <div className="inline-flex border-b border-gray-300 w-full min-w-max">
-            <button
-              className={`px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-xs sm:text-sm font-medium relative whitespace-nowrap transition-colors duration-200 min-h-[44px] flex items-center ${
-                activeCategory === "all"
-                  ? "text-secondary"
-                  : "text-gray-500 hover:text-secondary"
-              }`}
-              onClick={() => handleCategoryChange("all")}
+      {/* FILTER BAR: Dropdown + Search */}
+      <div className="mb-6 sm:mb-8">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
+          {/* Category Dropdown */}
+          <div className="relative flex-shrink-0 sm:w-64">
+            <select
+              value={activeCategory}
+              onChange={(e) => handleCategoryChange(e.target.value)}
+              className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-4 py-3 pr-10 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent cursor-pointer shadow-sm hover:border-gray-400 transition-colors"
             >
-              <span>All Figures</span>
-              {!loading && (
-                <span className="ml-1 sm:ml-2 bg-gray-100 text-gray-600 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs">
-                  {categorizedFigures.all?.length || 0}
-                </span>
-              )}
-              {activeCategory === "all" && (
-                <span className="absolute bottom-0 left-0 w-full h-0.5 bg-secondary"></span>
-              )}
-            </button>
+              <option value="all">All Categories ({categorizedFigures.all?.length || 0})</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category} ({categorizedFigures[category]?.length || 0})
+                </option>
+              ))}
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
 
-            {categories.map((category) => (
+          {/* Search Bar */}
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setDisplayCount(INITIAL_LOAD); // Reset pagination on search
+              }}
+              placeholder="Search by name, description, or tags..."
+              className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 pl-11 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent shadow-sm"
+            />
+            <div className="absolute left-3 top-1/2 -translate-y-1/2">
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            {searchQuery && (
               <button
-                key={category}
-                className={`px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-xs sm:text-sm font-medium relative whitespace-nowrap transition-colors duration-200 min-h-[44px] flex items-center ${
-                  activeCategory === category
-                    ? "text-secondary"
-                    : "text-gray-500 hover:text-secondary"
-                }`}
-                onClick={() => handleCategoryChange(category)}
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                <span>{category}</span>
-                {!loading && (
-                  <span className="ml-1 sm:ml-2 bg-gray-100 text-gray-600 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs">
-                    {categorizedFigures[category]?.length || 0}
-                  </span>
-                )}
-                {activeCategory === category && (
-                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-secondary"></span>
-                )}
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
-            ))}
+            )}
           </div>
         </div>
+
+        {/* Active filters indicator */}
+        {(activeCategory !== "all" || searchQuery) && (
+          <div className="mt-3 flex flex-wrap gap-2 items-center">
+            <span className="text-xs text-gray-500">Filtering:</span>
+            {activeCategory !== "all" && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-secondary/10 text-secondary text-xs font-medium rounded-full">
+                {activeCategory}
+                <button onClick={() => setActiveCategory("all")} className="hover:text-secondary/70">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            )}
+            {searchQuery && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                "{searchQuery}"
+                <button onClick={() => setSearchQuery("")} className="hover:text-gray-800">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            )}
+            <button
+              onClick={() => { setActiveCategory("all"); setSearchQuery(""); }}
+              className="text-xs text-gray-500 hover:text-gray-700 underline"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
       </div>
 
       {/* PERFORMANCE: Optimized Loading State */}
