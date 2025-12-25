@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import FigureCard from './FigureCard';
+import { getOptimizedImageUrl, preloadImage } from '../../utils/imageUtils';
 
 // =============================================================================
 // PERFORMANCE OPTIMIZATION: Lazy Loading Wrapper for FigureCard
@@ -14,6 +15,7 @@ import FigureCard from './FigureCard';
  * - Decreases memory usage by deferring off-screen components
  * - Improves scroll performance with progressive loading
  * - Shows skeleton while loading for better UX
+ * - Preloads images when entering 200px zone for faster rendering
  */
 function LazyFigureCard(props) {
   const [isVisible, setIsVisible] = useState(false);
@@ -28,6 +30,12 @@ function LazyFigureCard(props) {
             // PERFORMANCE: Mark as visible and stop observing
             setIsVisible(true);
             observer.unobserve(entry.target);
+            
+            // PERFORMANCE: Preload the image as soon as card enters zone
+            if (props.figure?.imageUrl) {
+              const optimizedUrl = getOptimizedImageUrl(props.figure.imageUrl, 400);
+              preloadImage(optimizedUrl, true); // High priority preload
+            }
           }
         });
       },
@@ -47,7 +55,7 @@ function LazyFigureCard(props) {
         observer.unobserve(cardRef.current);
       }
     };
-  }, []);
+  }, [props.figure?.imageUrl]);
 
   return (
     <div ref={cardRef} className="w-full">

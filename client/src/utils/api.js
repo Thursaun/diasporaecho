@@ -30,7 +30,7 @@ const performanceTracker = {
       return; // Timer already running, skip
     }
     activeTimers.add(label);
-    
+
     if (performance && performance.mark) {
       try {
         performance.mark(`${label}-start`);
@@ -44,19 +44,19 @@ const performanceTracker = {
       // Ignore timer conflicts
     }
   },
-  
+
   end: (label) => {
     // Only end timer if it was started
     if (!activeTimers.has(label)) {
       return; // Timer wasn't started, skip
     }
     activeTimers.delete(label);
-    
+
     if (performance && performance.mark && performance.measure) {
       try {
         performance.mark(`${label}-end`);
         performance.measure(label, `${label}-start`, `${label}-end`);
-        
+
         const measures = performance.getEntriesByName(label);
         const measure = measures[measures.length - 1];
         if (measure) {
@@ -116,7 +116,7 @@ const cachedFetch = async (url, options = {}, cacheType = 'REGULAR') => {
   const requestPromise = (async () => {
     try {
       console.log('🌐 Network request to:', url.split('/').pop());
-      
+
       const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
@@ -190,7 +190,7 @@ const fetchWithTimeout = async (url, options = {}, timeout = 30000, retries = 2,
 
       clearTimeout(timeoutId);
       return response;
-      
+
     } catch (error) {
       if (attempt <= retries) {
         console.warn(`⚠️ Attempt ${attempt} failed, retrying...`, error.message);
@@ -239,29 +239,76 @@ const checkResponse = (res) => {
 /**
  * Get all figures with caching and performance optimization
  * PERFORMANCE IMPROVEMENTS:
- * - Caching to reduce API calls
+ * - localStorage persistence (survives page refresh)
+ * - Stale-while-revalidate (show cached, refresh in background)
  * - Timeout handling to prevent hanging
- * - Error handling with fallback
  * - Performance monitoring
  */
 const getFigures = async () => {
+  const STORAGE_KEY = 'diaspora_figures';
+  const STORAGE_TIMESTAMP_KEY = 'diaspora_figures_ts';
+  const STALE_THRESHOLD = 5 * 60 * 1000; // 5 minutes
+
   try {
     performanceTracker.start('getFigures');
-    
-    // PERFORMANCE: Use cached fetch with timeout
+
+    // PERFORMANCE: Check localStorage for instant load
+    const cachedData = localStorage.getItem(STORAGE_KEY);
+    const cachedTimestamp = parseInt(localStorage.getItem(STORAGE_TIMESTAMP_KEY) || '0');
+    const isStale = Date.now() - cachedTimestamp > STALE_THRESHOLD;
+
+    // If we have cached data, return it immediately
+    if (cachedData) {
+      const figures = JSON.parse(cachedData);
+      console.log(`⚡ Loaded ${figures.length} figures from localStorage (${isStale ? 'stale' : 'fresh'})`);
+
+      // If stale, refresh in background (don't await)
+      if (isStale) {
+        console.log('🔄 Refreshing figures in background...');
+        fetchWithTimeout(`${BASE_URL}/figures`)
+          .then(freshData => {
+            if (Array.isArray(freshData) && freshData.length > 0) {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(freshData));
+              localStorage.setItem(STORAGE_TIMESTAMP_KEY, Date.now().toString());
+              console.log(`✅ Background refresh: ${freshData.length} figures cached`);
+            }
+          })
+          .catch(err => console.warn('Background refresh failed:', err.message));
+      }
+
+      performanceTracker.end('getFigures');
+      return figures;
+    }
+
+    // No cache - fetch from network
+    console.log('🌐 No cached figures, fetching from network...');
     const data = await fetchWithTimeout(`${BASE_URL}/figures`);
-    
+
+    // Cache to localStorage
+    if (Array.isArray(data) && data.length > 0) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        localStorage.setItem(STORAGE_TIMESTAMP_KEY, Date.now().toString());
+        console.log(`💾 Cached ${data.length} figures to localStorage`);
+      } catch (e) {
+        console.warn('localStorage full, skipping cache:', e.message);
+      }
+    }
+
     performanceTracker.end('getFigures');
-    
-    // PERFORMANCE: Ensure array return type for consistent handling
     return Array.isArray(data) ? data : [];
-    
+
   } catch (error) {
     performanceTracker.end('getFigures');
     console.error("❌ Error fetching figures:", error);
-    
-    // PERFORMANCE: Return empty array as fallback instead of throwing
-    // This prevents the entire UI from breaking if API fails
+
+    // FALLBACK: Try localStorage even if network failed
+    const cachedData = localStorage.getItem(STORAGE_KEY);
+    if (cachedData) {
+      console.log('🔄 Network failed, using localStorage fallback');
+      return JSON.parse(cachedData);
+    }
+
     return [];
   }
 };
@@ -269,15 +316,48 @@ const getFigures = async () => {
 /**
  * Get featured figures with optimization
  * PERFORMANCE IMPROVEMENTS:
- * - Separate cache key for featured content
- * - Faster loading for homepage content
- * - Graceful fallback handling
+ * - localStorage persistence (instant homepage load)
+ * - Stale-while-revalidate (show cached, refresh in background)
+ * - 1-hour cache for featured figures
+ * - Graceful fallback to regular figures
  */
 const getFeaturedFigures = async () => {
+  const STORAGE_KEY = 'diaspora_featured';
+  const STORAGE_TIMESTAMP_KEY = 'diaspora_featured_ts';
+  const STALE_THRESHOLD = 60 * 60 * 1000; // 1 hour (featured rotate less often)
+
   try {
     performanceTracker.start('getFeaturedFigures');
 
-    // PERFORMANCE: Use 24-hour cache for featured figures (they rotate daily)
+    // PERFORMANCE: Check localStorage for instant homepage load
+    const cachedData = localStorage.getItem(STORAGE_KEY);
+    const cachedTimestamp = parseInt(localStorage.getItem(STORAGE_TIMESTAMP_KEY) || '0');
+    const isStale = Date.now() - cachedTimestamp > STALE_THRESHOLD;
+
+    if (cachedData) {
+      const figures = JSON.parse(cachedData);
+      console.log(`⚡ Loaded ${figures.length} featured figures from localStorage (${isStale ? 'stale' : 'fresh'})`);
+
+      // If stale, refresh in background
+      if (isStale) {
+        console.log('🔄 Refreshing featured figures in background...');
+        fetchWithTimeout(`${BASE_URL}/figures/featured`, {}, 30000, 2, 'FEATURED')
+          .then(freshData => {
+            if (Array.isArray(freshData) && freshData.length > 0) {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(freshData));
+              localStorage.setItem(STORAGE_TIMESTAMP_KEY, Date.now().toString());
+              console.log(`✅ Background refresh: ${freshData.length} featured figures cached`);
+            }
+          })
+          .catch(err => console.warn('Featured background refresh failed:', err.message));
+      }
+
+      performanceTracker.end('getFeaturedFigures');
+      return figures;
+    }
+
+    // No cache - fetch from network
+    console.log('🌐 No cached featured figures, fetching...');
     const data = await fetchWithTimeout(
       `${BASE_URL}/figures/featured`,
       {},
@@ -286,14 +366,32 @@ const getFeaturedFigures = async () => {
       'FEATURED'
     );
 
+    // Cache to localStorage
+    if (Array.isArray(data) && data.length > 0) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        localStorage.setItem(STORAGE_TIMESTAMP_KEY, Date.now().toString());
+        console.log(`💾 Cached ${data.length} featured figures to localStorage`);
+      } catch (e) {
+        console.warn('localStorage full, skipping featured cache:', e.message);
+      }
+    }
+
     performanceTracker.end('getFeaturedFigures');
     return Array.isArray(data) ? data : [];
-    
+
   } catch (error) {
     performanceTracker.end('getFeaturedFigures');
     console.error("❌ Error fetching featured figures:", error);
-    
-    // PERFORMANCE: Fallback to regular figures if featured fails
+
+    // FALLBACK: Try localStorage first
+    const cachedData = localStorage.getItem(STORAGE_KEY);
+    if (cachedData) {
+      console.log('🔄 Network failed, using localStorage fallback for featured');
+      return JSON.parse(cachedData);
+    }
+
+    // Last resort: fallback to regular figures
     console.log("🔄 Falling back to regular figures...");
     return getFigures().then(figures => figures.slice(0, 6));
   }
@@ -371,12 +469,12 @@ const searchFigures = async (params = {}) => {
 const getFigureById = async (id) => {
   try {
     performanceTracker.start('getFigureById');
-    
+
     const data = await fetchWithTimeout(`${BASE_URL}/figures/${id}`);
-    
+
     performanceTracker.end('getFigureById');
     return data;
-    
+
   } catch (error) {
     performanceTracker.end('getFigureById');
     console.error("❌ Error fetching figure by ID:", error);
@@ -393,12 +491,12 @@ const getFigureById = async (id) => {
 const getFigureByWikipediaId = async (wikipediaId) => {
   try {
     performanceTracker.start('getFigureByWikipediaId');
-    
+
     const data = await fetchWithTimeout(`${BASE_URL}/figures/wiki/${wikipediaId}`);
-    
+
     performanceTracker.end('getFigureByWikipediaId');
     return data;
-    
+
   } catch (error) {
     performanceTracker.end('getFigureByWikipediaId');
     console.error("❌ Error fetching figure by Wikipedia ID:", error);
@@ -419,25 +517,25 @@ const getFigureByWikipediaId = async (wikipediaId) => {
 const likeFigure = async (id) => {
   try {
     performanceTracker.start('likeFigure');
-    
+
     const response = await fetch(`${BASE_URL}/figures/${id}/like`, {
       method: "POST",
       headers: getHeaders(),
     });
-    
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-    
+
     const data = await response.json();
-    
+
     performanceTracker.end('likeFigure');
-    
+
     // PERFORMANCE: Clear relevant cache entries after like action
     clearCacheByPattern('/figures');
-    
+
     return data;
-    
+
   } catch (error) {
     performanceTracker.end('likeFigure');
     console.error("❌ Error liking figure:", error);
@@ -454,18 +552,18 @@ const likeFigure = async (id) => {
 const getSavedFigures = async () => {
   try {
     performanceTracker.start('getSavedFigures');
-    
+
     const data = await fetchWithTimeout(`${BASE_URL}/users/me/saved`, {
       headers: getHeaders(),
     });
-    
+
     performanceTracker.end('getSavedFigures');
     return Array.isArray(data) ? data : [];
-    
+
   } catch (error) {
     performanceTracker.end('getSavedFigures');
     console.error("❌ Error fetching saved figures:", error);
-    
+
     // PERFORMANCE: Return empty array instead of throwing for better UX
     return [];
   }
@@ -480,7 +578,7 @@ const getSavedFigures = async () => {
 const saveFigure = async (figure) => {
   try {
     performanceTracker.start('saveFigure');
-    
+
     // PERFORMANCE: Normalize figure data to reduce server processing time
     const figureToSave = {
       ...figure,
@@ -502,14 +600,14 @@ const saveFigure = async (figure) => {
     }
 
     const data = await response.json();
-    
+
     performanceTracker.end('saveFigure');
-    
+
     // PERFORMANCE: Clear cache after save operation
     clearCacheByPattern('/saved');
-    
+
     return data;
-    
+
   } catch (error) {
     performanceTracker.end('saveFigure');
     console.error("❌ Error saving figure:", error);
@@ -526,7 +624,7 @@ const saveFigure = async (figure) => {
 const unsaveFigure = async (figureId) => {
   try {
     performanceTracker.start('unsaveFigure');
-    
+
     const response = await fetch(`${BASE_URL}/figures/unsave/${figureId}`, {
       method: "DELETE",
       headers: getHeaders(),
@@ -537,14 +635,14 @@ const unsaveFigure = async (figureId) => {
     }
 
     const data = await response.json();
-    
+
     performanceTracker.end('unsaveFigure');
-    
+
     // PERFORMANCE: Clear cache after unsave operation
     clearCacheByPattern('/saved');
-    
+
     return data;
-    
+
   } catch (error) {
     performanceTracker.end('unsaveFigure');
     console.error("❌ Error unsaving figure:", error);
@@ -649,24 +747,24 @@ const getCacheStats = () => {
 const checkApiHealth = async () => {
   try {
     performanceTracker.start('apiHealthCheck');
-    
+
     const response = await fetch(`${BASE_URL.replace('/api', '/health')}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!response.ok) {
       throw new Error(`Health check failed: ${response.status}`);
     }
-    
+
     const data = await response.json();
     performanceTracker.end('apiHealthCheck');
-    
+
     console.log('✅ API Health Check:', data);
     return true;
-    
+
   } catch (error) {
     performanceTracker.end('apiHealthCheck');
     console.error('❌ API Health Check Failed:', error);
@@ -685,16 +783,16 @@ export {
   searchFigures,
   getFigureById,
   getFigureByWikipediaId,
-  
+
   // User interaction functions
   likeFigure,
   getSavedFigures,
   saveFigure,
   unsaveFigure,
-  
+
   // Utility functions
   matchToCategory,
-  
+
   // Performance monitoring functions
   clearAllCache,
   getCacheStats,
