@@ -513,6 +513,12 @@ const searchFigures = async (req, res, next) => {
         score += figure.score * 10;
       }
 
+      // PRIMARY FIGURE PRIORITIZATION: Boost people of color over allies
+      // isPrimaryFigure defaults to true, so we only penalize if explicitly false
+      if (figure.isPrimaryFigure !== false) {
+        score += 200;
+      }
+
       return { ...figure, _searchScore: score };
     });
 

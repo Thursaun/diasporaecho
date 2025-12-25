@@ -382,22 +382,25 @@ const FigureCard = memo(function FigureCard({
           <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-100/50 rounded-full blur-2xl"></div>
 
           {/* Content */}
-          <div className="relative z-10 flex flex-col items-center h-full justify-center">
+          <div className="relative z-10 flex flex-col items-center h-full w-full py-4">
             {getCategoryIcon()}
             
-            <h3 className="text-xl font-bold text-gray-900 mb-2 font-display">{name}</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-1 font-display">{name}</h3>
             
-            <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-secondary/10 text-secondary mb-4 border border-secondary/20">
+            <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-secondary/10 text-secondary mb-3 border border-secondary/20">
               {categories[0] || "Historical Figure"}
             </span>
 
-            <p className="text-sm text-gray-600 leading-relaxed line-clamp-6 mb-6 px-2">
-              {description}
-            </p>
+            {/* Description area - fills available space */}
+            <div className="flex-1 overflow-y-auto w-full px-2 mb-6">
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {description}
+              </p>
+            </div>
 
             <button
               onClick={handleFlipBack}
-              className="mt-auto px-6 py-2 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors shadow-md hover:shadow-lg flex items-center gap-2"
+              className="flex-shrink-0 px-6 py-2 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors shadow-md hover:shadow-lg flex items-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />

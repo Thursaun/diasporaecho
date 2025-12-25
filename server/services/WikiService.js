@@ -23,7 +23,7 @@ const WIKI_CACHE_TTL = 60 * 60 * 1000; // 1 hour (increased from 30min)
 const withTimeout = (promise, ms) => {
   return Promise.race([
     promise,
-    new Promise((_, reject) => 
+    new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Timeout')), ms)
     )
   ]);
@@ -35,63 +35,63 @@ const withTimeout = (promise, ms) => {
 // =============================================================================
 const CATEGORY_MAPPINGS = [
   // Athletes - very specific, high priority
-  { 
+  {
     keywords: ['athlete', 'basketball player', 'football player', 'baseball player', 'boxer', 'sprinter', 'track and field', 'olympian', 'tennis player', 'swimmer', 'golfer', 'wrestler', 'martial artist', 'soccer player', 'racing driver'],
-    category: 'Athletes' 
+    category: 'Athletes'
   },
-  
+
   // Musicians - separate category for rich musical heritage
-  { 
+  {
     keywords: ['musician', 'singer', 'rapper', 'hip hop artist', 'jazz musician', 'composer', 'songwriter', 'record producer', 'disc jockey', 'conductor', 'pianist', 'guitarist', 'drummer', 'saxophonist', 'trumpeter', 'gospel singer', 'r&b singer', 'soul singer'],
-    category: 'Musicians' 
+    category: 'Musicians'
   },
-  
+
   // Arts & Entertainment (excluding musicians)
-  { 
+  {
     keywords: ['actor', 'actress', 'dancer', 'choreographer', 'filmmaker', 'film director', 'director', 'artist', 'painter', 'sculptor', 'comedian', 'entertainer', 'television presenter', 'photographer', 'fashion designer', 'model'],
-    category: 'Arts & Entertainment' 
+    category: 'Arts & Entertainment'
   },
-  
+
   // Literary Icons
-  { 
+  {
     keywords: ['writer', 'author', 'novelist', 'poet', 'playwright', 'journalist', 'essayist', 'screenwriter', 'biographer', 'memoirist', 'lyricist', 'editor', 'literary critic'],
-    category: 'Literary Icons' 
+    category: 'Literary Icons'
   },
-  
+
   // Inventors & Innovators
-  { 
+  {
     keywords: ['inventor', 'scientist', 'physicist', 'chemist', 'biologist', 'engineer', 'mathematician', 'astronaut', 'aerospace engineer', 'computer scientist', 'researcher', 'botanist', 'zoologist', 'surgeon', 'physician', 'doctor', 'nurse', 'medical researcher'],
-    category: 'Inventors & Innovators' 
+    category: 'Inventors & Innovators'
   },
-  
+
   // Scholars & Educators
-  { 
+  {
     keywords: ['professor', 'teacher', 'academic', 'historian', 'scholar', 'philosopher', 'theologian', 'university president', 'educator', 'librarian', 'sociologist', 'psychologist', 'economist', 'lecturer'],
-    category: 'Scholars & Educators' 
+    category: 'Scholars & Educators'
   },
-  
+
   // Business & Entrepreneurs (NEW)
-  { 
+  {
     keywords: ['businessperson', 'entrepreneur', 'executive', 'ceo', 'founder', 'banker', 'investor', 'philanthropist', 'business executive', 'industrialist', 'publisher', 'media proprietor'],
-    category: 'Business & Entrepreneurs' 
+    category: 'Business & Entrepreneurs'
   },
-  
+
   // Political Leaders
-  { 
+  {
     keywords: ['politician', 'senator', 'congresswoman', 'congressman', 'representative', 'mayor', 'governor', 'president', 'diplomat', 'ambassador', 'judge', 'supreme court', 'attorney general', 'secretary', 'cabinet member', 'lawyer', 'attorney'],
-    category: 'Political Leaders' 
+    category: 'Political Leaders'
   },
-  
+
   // Pan-African Leaders
-  { 
+  {
     keywords: ['pan-africanist', 'pan-african', 'liberator', 'independence leader', 'head of state', 'prime minister'],
-    category: 'Pan-African Leaders' 
+    category: 'Pan-African Leaders'
   },
-  
+
   // Activists & Freedom Fighters (COMBINED)
-  { 
+  {
     keywords: ['civil rights activist', 'civil rights leader', 'activist', 'organizer', 'social activist', 'human rights activist', 'minister', 'pastor', 'reverend', 'bishop', 'preacher', 'abolitionist', 'freedom fighter', 'underground railroad', 'slave revolt', 'anti-slavery', 'suffragist'],
-    category: 'Activists & Freedom Fighters' 
+    category: 'Activists & Freedom Fighters'
   }
 ];
 
@@ -105,32 +105,32 @@ function determineCategoriesFromOccupation(occupations) {
   if (!occupations || !Array.isArray(occupations) || occupations.length === 0) {
     return ['Scholars & Educators']; // Default fallback
   }
-  
+
   // Normalize occupations to lowercase for matching
   const normalizedOccupations = occupations.map(o => o.toLowerCase());
   const occupationString = normalizedOccupations.join(' ');
-  
+
   // Collect ALL matching categories
   const matchedCategories = new Set();
-  
+
   for (const mapping of CATEGORY_MAPPINGS) {
     for (const keyword of mapping.keywords) {
       // Check if any occupation contains this keyword
       if (normalizedOccupations.some(occ => occ.includes(keyword)) ||
-          occupationString.includes(keyword)) {
+        occupationString.includes(keyword)) {
         matchedCategories.add(mapping.category);
         console.log(`📂 Category match: "${keyword}" → ${mapping.category}`);
         break; // Move to next category mapping once we found a match
       }
     }
   }
-  
+
   // Return matched categories or default
   if (matchedCategories.size === 0) {
     console.log(`📂 No category match for occupations: ${occupations.join(', ')}`);
     return ['Scholars & Educators'];
   }
-  
+
   console.log(`📂 All matched categories: ${[...matchedCategories].join(', ')}`);
   return [...matchedCategories];
 }
@@ -167,14 +167,14 @@ const searchController = async (req, res) => {
       console.log(`✅ Found ${wikiResults.length} Wikipedia results in ${Date.now() - startTime}ms`);
     } catch (err) {
       console.warn(`⚠️ Wikipedia search failed for "${searchTerm}":`, err.message);
-      return res.status(503).json({ 
+      return res.status(503).json({
         message: "Search temporarily unavailable. Please try again.",
         results: []
       });
     }
 
     // Filter: Only include results with valid images (no placeholders)
-    const validResults = wikiResults.filter(fig => 
+    const validResults = wikiResults.filter(fig =>
       fig.imageUrl && !fig.imageUrl.includes("placeholder")
     );
 
@@ -183,19 +183,19 @@ const searchController = async (req, res) => {
       const term = searchTerm.toLowerCase();
       const aName = a.name.toLowerCase();
       const bName = b.name.toLowerCase();
-      
+
       // Exact match first
       if (aName === term) return -1;
       if (bName === term) return 1;
-      
+
       // Starts with term
       if (aName.startsWith(term) && !bName.startsWith(term)) return -1;
       if (!aName.startsWith(term) && bName.startsWith(term)) return 1;
-      
+
       // Contains term
       if (aName.includes(term) && !bName.includes(term)) return -1;
       if (!aName.includes(term) && bName.includes(term)) return 1;
-      
+
       return 0;
     });
 
@@ -209,7 +209,7 @@ const searchController = async (req, res) => {
     cacheService.set(cacheKey, finalResults, CACHE_TTL.SEARCH_LOCAL);
 
     console.log(`📊 Returning ${finalResults.length} Wikipedia results in ${Date.now() - startTime}ms`);
-    
+
     res.set({
       'Cache-Control': 'public, max-age=600, stale-while-revalidate=120',
       'X-Cache': 'MISS'
@@ -225,7 +225,7 @@ const searchController = async (req, res) => {
 // PERFORMANCE: Wrapper for searchFigures with caching
 async function searchFiguresWithCache(searchTerm) {
   const cacheKey = `wiki:${searchTerm.toLowerCase().trim()}`;
-  
+
   // Check in-memory wiki cache
   const cached = wikiSearchCache.get(cacheKey);
   if (cached && Date.now() < cached.expiresAt) {
@@ -235,13 +235,13 @@ async function searchFiguresWithCache(searchTerm) {
 
   // Fetch from Wikipedia
   const results = await searchFigures({ searchTerm, rows: 20 });
-  
+
   // Cache the result
   wikiSearchCache.set(cacheKey, {
     data: results,
     expiresAt: Date.now() + WIKI_CACHE_TTL
   });
-  
+
   return results;
 }
 
@@ -249,16 +249,16 @@ async function searchFiguresWithCache(searchTerm) {
 const searchLocalFigures = async (searchTerm) => {
   try {
     const query = searchTerm.trim();
-    
+
     // Use MongoDB text search for relevance
     return await Figure.find(
       { $text: { $search: query } },
       { score: { $meta: "textScore" } }
     )
-    .select("-owners") // Don't leak private data
-    .sort({ score: { $meta: "textScore" } })
-    .lean()
-    .limit(20);
+      .select("-owners") // Don't leak private data
+      .sort({ score: { $meta: "textScore" } })
+      .lean()
+      .limit(20);
   } catch (err) {
     console.error("Local search error:", err);
     return [];
@@ -267,15 +267,15 @@ const searchLocalFigures = async (searchTerm) => {
 
 function isSearchingByTopic(searchTerm) {
   if (!searchTerm) return false;
-  
+
   const term = searchTerm.toLowerCase();
-  
+
   // FIRST: Check if it looks like a person's name (2+ capitalized words)
   // This takes priority over topic keywords
   const words = searchTerm.split(" ").filter((word) => word.length > 0);
-  const looksLikeName = words.length >= 2 && 
+  const looksLikeName = words.length >= 2 &&
     words.every((word) => word[0] === word[0].toUpperCase());
-  
+
   if (looksLikeName) {
     console.log(`📝 "${searchTerm}" looks like a person name - using person search`);
     return false; // NOT a topic search
@@ -300,7 +300,7 @@ const searchFigures = function (params = {}) {
 
   // IMPROVED: Better search strategies for famous figures
   let searchQueries = [];
-  
+
   if (!isTopicSearch) {
     // For person searches, try multiple strategies
     searchQueries = [
@@ -419,14 +419,14 @@ async function trySearchStrategies(searchQueries, limit, originalTerm) {
 function calculateNameSimilarity(title, searchTerm) {
   const titleLower = title.toLowerCase();
   const searchLower = searchTerm.toLowerCase();
-  
+
   // Exact match
   if (titleLower === searchLower) return 1.0;
-  
+
   // Contains all words
   const searchWords = searchLower.split(' ');
   const matchedWords = searchWords.filter(word => titleLower.includes(word));
-  
+
   return matchedWords.length / searchWords.length;
 }
 
@@ -538,6 +538,7 @@ async function fetchWikidataBatch(wikidataIds, pageIdToWikidataId, pages) {
       const education = extractWikidataLabels(entity.claims.P69, wikidataResponse).slice(0, 3); // P69 = educated at
       const notableWorks = extractWikidataLabels(entity.claims.P800, wikidataResponse).slice(0, 5); // P800 = notable works
       const movement = extractWikidataLabels(entity.claims.P135, wikidataResponse); // P135 = movement
+      const ethnicGroup = extractWikidataLabels(entity.claims.P172, wikidataResponse); // P172 = ethnic group (for prioritization)
 
       // Find the corresponding Wikipedia page
       const pageId = Object.keys(pageIdToWikidataId).find(
@@ -557,6 +558,7 @@ async function fetchWikidataBatch(wikidataIds, pageIdToWikidataId, pages) {
         pages[pageId].wikidataEducation = education;
         pages[pageId].wikidataNotableWorks = notableWorks;
         pages[pageId].wikidataMovement = movement;
+        pages[pageId].wikidataEthnicGroup = ethnicGroup; // For primary figure prioritization
 
         if (birthYear || deathYear) {
           console.log(`✅ Wikidata: ${pages[pageId].title} - Birth: ${birthYear || 'unknown'}, Death: ${deathYear || 'unknown'}`);
@@ -566,6 +568,9 @@ async function fetchWikidataBatch(wikidataIds, pageIdToWikidataId, pages) {
         }
         if (birthPlace) {
           console.log(`   Birthplace: ${birthPlace}`);
+        }
+        if (ethnicGroup.length > 0) {
+          console.log(`   Ethnic group: ${ethnicGroup.join(', ')}`);
         }
       }
     }
@@ -627,14 +632,14 @@ function extractYearFromWikidataClaim(claim) {
 
       // Pad year with leading zeros if it's less than 4 digits (though Wikidata usually gives 11 chars)
       // Actually standard Wikidata ISO is pretty consistent.
-      
+
       const currentYear = new Date().getFullYear();
-      
+
       if (sign === '-') {
         // BCE date
         return `${year} BCE`;
       }
-      
+
       // Standard CE date validation
       // Allow historical figures (e.g. 1500s) but filter obvious far-future bad data
       if (year <= currentYear + 1) {
@@ -676,11 +681,11 @@ function formatWikipediaData(data, searchTerm, peopleOnly = false) {
       } else if (page.wikidataBirth) {
         // No death date - check if person is likely still alive
         const birthYearInt = parseInt(page.wikidataBirth);
-        
+
         if (!isNaN(birthYearInt) && !page.wikidataBirth.includes('BCE')) {
           const currentYear = new Date().getFullYear();
           const age = currentYear - birthYearInt;
-          
+
           // If age is reasonable for a living person (< 115), show Present
           // This assumes no death date means they're alive
           if (age < 115 && age > 0) {
@@ -739,6 +744,7 @@ function formatWikipediaData(data, searchTerm, peopleOnly = false) {
       education: page.wikidataEducation || [],
       notableWorks: page.wikidataNotableWorks || [],
       movement: page.wikidataMovement || [],
+      ethnicGroup: page.wikidataEthnicGroup || [], // From Wikidata P172
     });
   }
 
@@ -762,19 +768,19 @@ function looksLikePerson(page) {
 
 function extractYearsFromText(text) {
   if (!text || typeof text !== 'string') return null;
-  
+
   // Extract only the first sentence/line - this is where Wikipedia typically puts birth/death info
   const firstSentence = text.split(/[.!?]/)[0].trim();
-  
+
   // If first sentence is too short, try first two sentences
-  const textToAnalyze = firstSentence.length < 50 ? 
-    text.split(/[.!?]/).slice(0, 2).join('. ').trim() : 
+  const textToAnalyze = firstSentence.length < 50 ?
+    text.split(/[.!?]/).slice(0, 2).join('. ').trim() :
     firstSentence;
-  
+
   // Clean and normalize the text
   const cleanText = textToAnalyze.replace(/\s+/g, ' ').replace(/[–—]/g, '-').trim();
   console.log(`🔍 Extracting years from first line: "${cleanText}"`);
-  
+
   // OPTIMIZATION: Enhanced patterns for better year extraction
   const patterns = [
     // 1. Wikipedia's most common format: Name (born Other Name, c. March 1822 – March 10, 1913)
@@ -868,12 +874,12 @@ function extractYearsFromText(text) {
       priority: 13
     }
   ];
-  
+
   let birthYear = null;
   let deathYear = null;
   let bestMatch = null;
   let bestPriority = 999;
-  
+
   // Try each pattern and find the best match
   for (const pattern of patterns) {
     const matches = [...cleanText.matchAll(pattern.regex)];
@@ -889,8 +895,8 @@ function extractYearsFromText(text) {
         // Validate years are reasonable
         const currentYear = new Date().getFullYear();
         if (year1 >= 1700 && year1 <= currentYear &&
-            year2 >= 1700 && year2 <= currentYear &&
-            year2 > year1 && (year2 - year1) < 120) {
+          year2 >= 1700 && year2 <= currentYear &&
+          year2 > year1 && (year2 - year1) < 120) {
 
           if (pattern.priority < bestPriority) {
             birthYear = year1;
@@ -912,8 +918,8 @@ function extractYearsFromText(text) {
 
         const currentYear = new Date().getFullYear();
         if (birthYr >= 1700 && birthYr <= currentYear &&
-            deathYr >= 1700 && deathYr <= currentYear &&
-            deathYr > birthYr && (deathYr - birthYr) < 120) {
+          deathYr >= 1700 && deathYr <= currentYear &&
+          deathYr > birthYr && (deathYr - birthYr) < 120) {
 
           if (pattern.priority < bestPriority) {
             birthYear = birthYr;
@@ -945,17 +951,17 @@ function extractYearsFromText(text) {
       }
     }
   }
-  
+
   // If we have a complete birth-death pair, use it
   if (bestMatch && birthYear && deathYear) {
     console.log(`🎯 Final result (birth-death): ${birthYear}-${deathYear}`);
     return `${birthYear}-${deathYear}`;
   }
-  
+
   // Handle birth-only cases
   if (birthYear && !deathYear) {
     const currentYear = new Date().getFullYear();
-    
+
     // Enhanced living person detection
     const livingIndicators = [
       /\bis\s+(?:an?|the)\s+(?:american|african[- ]american)/i,
@@ -966,14 +972,14 @@ function extractYearsFromText(text) {
       /works as/i,
       /active/i
     ];
-    
+
     const deathIndicators = [
       /\b(?:died|death|deceased|late|passed away|assassinated|killed|murdered|executed)\b/i
     ];
-    
+
     const hasLivingIndicators = livingIndicators.some(pattern => pattern.test(cleanText));
     const hasDeathIndicators = deathIndicators.some(pattern => pattern.test(cleanText));
-    
+
     // If born within last 80 years and shows living indicators, likely alive
     if (birthYear > currentYear - 80 && hasLivingIndicators && !hasDeathIndicators) {
       console.log(`🎯 Final result (living): ${birthYear}-Present`);
@@ -983,22 +989,22 @@ function extractYearsFromText(text) {
       return `${birthYear}`;
     }
   }
-  
+
   // Final fallback: look for any year range in first line
   const yearRangeMatch = cleanText.match(/(\d{4})\s*[-–—]\s*(\d{4})/);
   if (yearRangeMatch) {
     const year1 = parseInt(yearRangeMatch[1]);
     const year2 = parseInt(yearRangeMatch[2]);
     const currentYear = new Date().getFullYear();
-    
-    if (year1 >= 1700 && year1 <= currentYear && 
-        year2 >= 1700 && year2 <= currentYear && 
-        year2 > year1 && (year2 - year1) < 120) {
+
+    if (year1 >= 1700 && year1 <= currentYear &&
+      year2 >= 1700 && year2 <= currentYear &&
+      year2 > year1 && (year2 - year1) < 120) {
       console.log(`🎯 Final result (fallback range): ${year1}-${year2}`);
       return `${year1}-${year2}`;
     }
   }
-  
+
   console.log(`❌ No valid years found in first line, returning null`);
   return null;
 }
@@ -1025,7 +1031,7 @@ function formatWikipediaData(data, searchTerm, peopleOnly = false) {
     // Use the improved year extraction
     const extractedYears = extractYearsFromText(page.extract);
     const years = extractedYears || "Unknown";
-    
+
     const tags = extractTags(page);
     const contributions = extractContributions(page.extract);
 
@@ -1033,7 +1039,7 @@ function formatWikipediaData(data, searchTerm, peopleOnly = false) {
       _id: pageId,
       wikipediaId: pageId,
       name: page.title,
-      imageUrl: page.original?.source || page.thumbnail?.source || 
+      imageUrl: page.original?.source || page.thumbnail?.source ||
         "https://via.placeholder.com/300x400?text=No+Image",
       description: page.extract || "No description available",
       years: years,
@@ -1058,7 +1064,7 @@ function extractTags(page) {
   if (page.categories) {
     for (const category of page.categories.slice(0, 5)) {
       const categoryName = category.title.replace("Category:", "");
-      
+
       if (!categoryName.match(/(Articles|Pages|Wikipedia|CS1|Stubs)/i)) {
         const tag = categoryName.split(" ")[0];
         if (tag.length > 2) {
@@ -1088,12 +1094,12 @@ function extractContributions(text) {
   if (sentences.length === 0) return [];
 
   const contributionKeywords = [
-    "known for", "famous for", "best known", "led", "founded", 
+    "known for", "famous for", "best known", "led", "founded",
     "established", "wrote", "created", "developed", "fought for"
   ];
 
   const contributionSentences = sentences.filter(sentence => {
-    return contributionKeywords.some(keyword => 
+    return contributionKeywords.some(keyword =>
       sentence.toLowerCase().includes(keyword)
     );
   });
@@ -1163,16 +1169,16 @@ const getFeaturedFigures = async function (searchTerm = "", limit = 6) {
         imageUrl: { $ne: null, $ne: "", $not: /placeholder/i },
         description: { $ne: null, $ne: "" }
       })
-      .sort({ likes: -1, createdAt: -1 })
-      .limit(limit * 2);
+        .sort({ likes: -1, createdAt: -1 })
+        .limit(limit * 2);
     } else {
       figuresPool = await Figure.find({
         imageUrl: { $ne: null, $ne: "", $not: /placeholder/i },
         description: { $ne: null, $ne: "", $regex: /.{100,}/ },
         name: { $ne: null, $ne: "" }
       })
-      .sort({ likes: -1, createdAt: -1 })
-      .limit(limit * 2);
+        .sort({ likes: -1, createdAt: -1 })
+        .limit(limit * 2);
     }
 
     if (figuresPool.length < limit) {
@@ -1180,13 +1186,13 @@ const getFeaturedFigures = async function (searchTerm = "", limit = 6) {
       const existingIds = figuresPool.map((fig) => fig._id);
 
       const randomFigures = await Figure.aggregate([
-        { 
-          $match: { 
+        {
+          $match: {
             _id: { $nin: existingIds },
             imageUrl: { $ne: null, $ne: "", $not: /placeholder/i },
             name: { $ne: null, $ne: "" },
             description: { $ne: null, $ne: "", $regex: /.{50,}/ }
-          } 
+          }
         },
         { $sample: { size: backfillCount } },
       ]);
@@ -1196,25 +1202,25 @@ const getFeaturedFigures = async function (searchTerm = "", limit = 6) {
 
     const validFigures = figuresPool
       .filter((figure) => {
-        const hasValidImage = figure.imageUrl && 
-          !figure.imageUrl.includes("placeholder") && 
+        const hasValidImage = figure.imageUrl &&
+          !figure.imageUrl.includes("placeholder") &&
           !figure.imageUrl.includes("No+Image");
-        
+
         const hasName = figure.name && figure.name.trim().length > 0;
-        const hasDescription = figure.description && 
+        const hasDescription = figure.description &&
           figure.description.trim().length >= 50;
         const hasSource = figure.source;
 
         return hasValidImage && hasName && hasDescription && hasSource;
       })
       .reduce((acc, current) => {
-        const duplicate = acc.find(item => 
+        const duplicate = acc.find(item =>
           item.name.toLowerCase() === current.name.toLowerCase()
         );
         if (!duplicate) {
           acc.push(current);
         } else if (current._id && !duplicate._id) {
-          const index = acc.findIndex(item => 
+          const index = acc.findIndex(item =>
             item.name.toLowerCase() === current.name.toLowerCase()
           );
           acc[index] = current;

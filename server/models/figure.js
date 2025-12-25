@@ -142,6 +142,16 @@ const FigureSchema = new mongoose.Schema({
     default: 0,
     index: true,
   },
+  // PRIMARY FIGURE PRIORITIZATION: For boosting people of color in search
+  isPrimaryFigure: {
+    type: Boolean,
+    default: true,  // Assume primary unless marked as ally
+    index: true,
+  },
+  ethnicGroup: {
+    type: [String],  // From Wikidata P172
+    default: [],
+  },
 });
 
 // PERFORMANCE: Compound indexes for common queries
