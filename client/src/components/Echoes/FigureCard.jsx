@@ -31,7 +31,9 @@ const FigureCard = memo(function FigureCard({
 
   // FLIP CARD STATE
   const [isFlipped, setIsFlipped] = useState(false);
+  const [showFlipHint, setShowFlipHint] = useState(false);
   const hoverTimerRef = useRef(null);
+  const hintTimerRef = useRef(null);
 
   // =============================================================================
   // DATA EXTRACTION: Optimized destructuring (with fallbacks for null figure)
@@ -65,7 +67,13 @@ const FigureCard = memo(function FigureCard({
   const startFlipTimer = () => {
     // Only start timer if not already running and not over a button
     if (!hoverTimerRef.current && !isOverButtonRef.current) {
+      // Show hint after 1.5s
+      hintTimerRef.current = setTimeout(() => {
+        setShowFlipHint(true);
+      }, 1500);
+      // Flip after 3s
       hoverTimerRef.current = setTimeout(() => {
+        setShowFlipHint(false);
         setIsFlipped(true);
       }, 3000);
     }
@@ -76,6 +84,11 @@ const FigureCard = memo(function FigureCard({
       clearTimeout(hoverTimerRef.current);
       hoverTimerRef.current = null;
     }
+    if (hintTimerRef.current) {
+      clearTimeout(hintTimerRef.current);
+      hintTimerRef.current = null;
+    }
+    setShowFlipHint(false);
   };
 
   const handleMouseEnter = () => {
@@ -233,6 +246,18 @@ const FigureCard = memo(function FigureCard({
           
           {/* Glass Overlay Ring */}
           <div className="absolute inset-0 rounded-2xl ring-0 ring-secondary/30 group-hover:ring-4 transition-all duration-500 pointer-events-none z-30"></div>
+
+          {/* FLIP HINT NOTIFICATION */}
+          <div className={`absolute top-3 left-1/2 -translate-x-1/2 z-40 transition-all duration-300 ${
+            showFlipHint ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
+          }`}>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-xs font-semibold rounded-full shadow-lg animate-pulse">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>Flipping...</span>
+            </div>
+          </div>
 
           {/* Image */}
           <div className="image-box absolute inset-0 overflow-hidden">
