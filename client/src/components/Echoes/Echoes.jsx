@@ -28,8 +28,19 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
   // STATE MANAGEMENT: Optimized for performance
   // =============================================================================
 
-  const [allFigures, setAllFigures] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // PERFORMANCE: Check localStorage for cached figures on mount to avoid loading flash
+  const [allFigures, setAllFigures] = useState(() => {
+    try {
+      const cached = localStorage.getItem('diaspora_figures');
+      if (cached) {
+        console.log('⚡ Initializing with cached figures from localStorage');
+        return JSON.parse(cached);
+      }
+    } catch (e) { /* ignore */ }
+    return [];
+  });
+  // Only show loading if we have NO cached data
+  const [loading, setLoading] = useState(() => !localStorage.getItem('diaspora_figures'));
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [activeCategory, setActiveCategory] = useState("all");
@@ -231,7 +242,10 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
   
   useEffect(() => {
     console.log('🚀 Starting figure fetch...');
-    setLoading(true);
+    // PERFORMANCE: Only show loading if we don't have cached data already
+    if (allFigures.length === 0) {
+      setLoading(true);
+    }
     setError(null);
     
     // PERFORMANCE: Add timeout for better error handling

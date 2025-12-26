@@ -10,8 +10,20 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [featuredFigures, setFeaturedFigures] = useState([]);
-  const [featuredLoading, setFeaturedLoading] = useState(true);
+  
+  // PERFORMANCE: Initialize featured figures from localStorage for instant render
+  const [featuredFigures, setFeaturedFigures] = useState(() => {
+    try {
+      const cached = localStorage.getItem('diaspora_featured');
+      if (cached) {
+        console.log('⚡ Initializing with cached featured figures from localStorage');
+        return JSON.parse(cached);
+      }
+    } catch (e) { /* ignore */ }
+    return [];
+  });
+  // Only show loading if we have NO cached featured data
+  const [featuredLoading, setFeaturedLoading] = useState(() => !localStorage.getItem('diaspora_featured'));
 
   // Debounce timer ref
   const debounceTimerRef = useRef(null);
@@ -127,7 +139,10 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
 
   // PERFORMANCE: Load featured figures (pre-selected daily, cached on server)
   useEffect(() => {
-    setFeaturedLoading(true);
+    // PERFORMANCE: Only show loading if we don't have cached data
+    if (featuredFigures.length === 0) {
+      setFeaturedLoading(true);
+    }
     getFeaturedFigures()
       .then((figures) => {
         console.log('✅ Featured figures loaded:', figures.length);
