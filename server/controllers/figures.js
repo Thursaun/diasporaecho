@@ -291,12 +291,16 @@ const likeFigure = (req, res, next) => {
       const userLikedIndex = figure.likedBy.indexOf(userId);
 
       if (userLikedIndex === -1) {
+        // User hasn't liked - add like
         figure.likedBy.push(userId);
-        figure.likes = figure.likedBy.length;
+        // FIX: Increment instead of resetting to array length (preserves historical likes)
+        figure.likes = (figure.likes || 0) + 1;
         console.log("Adding like. New likes count:", figure.likes);
       } else {
+        // User already liked - remove like
         figure.likedBy.splice(userLikedIndex, 1);
-        figure.likes = figure.likedBy.length;
+        // FIX: Decrement instead of resetting (but don't go below 0)
+        figure.likes = Math.max(0, (figure.likes || 1) - 1);
         console.log("Removing like. New likes count:", figure.likes);
       }
 
