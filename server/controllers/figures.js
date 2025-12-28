@@ -281,7 +281,8 @@ const likeFigure = (req, res, next) => {
     .then((figure) => {
       if (!figure) {
         console.log("Figure not found with ID:", figureId);
-        return res.status(404).json({ message: "Figure not found" });
+        res.status(404).json({ message: "Figure not found" });
+        return null; // Return null to stop chain
       }
 
       console.log("Found figure:", figure.name);
@@ -307,12 +308,18 @@ const likeFigure = (req, res, next) => {
       return figure.save();
     })
     .then((savedFigure) => {
-      console.log("Saved figure with likes:", savedFigure.likes);
-      res.status(200).json(savedFigure);
+      // FIX: Check if savedFigure exists (could be null if 404 was sent)
+      if (savedFigure) {
+        console.log("Saved figure with likes:", savedFigure.likes);
+        res.status(200).json(savedFigure);
+      }
     })
     .catch((error) => {
       console.error("Error in likeFigure:", error);
-      next(error);
+      // Only send error if response hasn't been sent
+      if (!res.headersSent) {
+        res.status(500).json({ message: "Error liking figure", error: error.message });
+      }
     });
 };
 
