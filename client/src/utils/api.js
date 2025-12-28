@@ -493,9 +493,12 @@ const getFigureByWikipediaId = async (wikipediaId) => {
   try {
     performanceTracker.start('getFigureByWikipediaId');
 
+    // FIX: Strip wiki_ prefix if present since route already adds /wiki/
+    const cleanId = wikipediaId.replace('wiki_', '');
+
     // First try to get from database
     try {
-      const data = await fetchWithTimeout(`${BASE_URL}/figures/wiki/${wikipediaId}`);
+      const data = await fetchWithTimeout(`${BASE_URL}/figures/wiki/${cleanId}`);
       performanceTracker.end('getFigureByWikipediaId');
       return data;
     } catch (dbError) {
@@ -503,13 +506,11 @@ const getFigureByWikipediaId = async (wikipediaId) => {
     }
 
     // Fallback: Fetch directly from Wikipedia API
-    // Extract page ID from wikipediaId (format: wiki_12345 or just the pageId)
-    const pageId = wikipediaId.replace('wiki_', '');
-
+    // cleanId is already extracted above (without wiki_ prefix)
     const wikiParams = new URLSearchParams({
       action: 'query',
       format: 'json',
-      pageids: pageId,
+      pageids: cleanId,
       prop: 'pageimages|extracts|info',
       exintro: 'true',
       explaintext: 'true',
@@ -526,7 +527,7 @@ const getFigureByWikipediaId = async (wikipediaId) => {
     }
 
     const wikiData = await wikiResponse.json();
-    const page = wikiData.query?.pages?.[pageId];
+    const page = wikiData.query?.pages?.[cleanId];
 
     if (!page || page.missing) {
       throw new Error('Wikipedia page not found');
@@ -534,7 +535,7 @@ const getFigureByWikipediaId = async (wikipediaId) => {
 
     // Format as a figure object
     const figure = {
-      wikipediaId: `wiki_${pageId}`,
+      wikipediaId: `wiki_${cleanId}`,
       name: page.title,
       description: page.extract || 'No description available.',
       imageUrl: page.thumbnail?.source || '',
