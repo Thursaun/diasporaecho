@@ -487,15 +487,68 @@ const getFigureById = async (id) => {
  * PERFORMANCE IMPROVEMENTS:
  * - Separate cache for Wikipedia-sourced figures
  * - Optimized for external content loading
+ * - FIX: Falls back to Wikipedia API if not in database
  */
 const getFigureByWikipediaId = async (wikipediaId) => {
   try {
     performanceTracker.start('getFigureByWikipediaId');
 
-    const data = await fetchWithTimeout(`${BASE_URL}/figures/wiki/${wikipediaId}`);
+    // First try to get from database
+    try {
+      const data = await fetchWithTimeout(`${BASE_URL}/figures/wiki/${wikipediaId}`);
+      performanceTracker.end('getFigureByWikipediaId');
+      return data;
+    } catch (dbError) {
+      console.log("📥 Figure not in DB, fetching from Wikipedia...");
+    }
+
+    // Fallback: Fetch directly from Wikipedia API
+    // Extract page ID from wikipediaId (format: wiki_12345 or just the pageId)
+    const pageId = wikipediaId.replace('wiki_', '');
+
+    const wikiParams = new URLSearchParams({
+      action: 'query',
+      format: 'json',
+      pageids: pageId,
+      prop: 'pageimages|extracts|info',
+      exintro: 'true',
+      explaintext: 'true',
+      piprop: 'thumbnail',
+      pithumbsize: '600',
+      inprop: 'url',
+      origin: '*'
+    });
+
+    const wikiResponse = await fetch(`https://en.wikipedia.org/w/api.php?${wikiParams.toString()}`);
+
+    if (!wikiResponse.ok) {
+      throw new Error('Wikipedia API request failed');
+    }
+
+    const wikiData = await wikiResponse.json();
+    const page = wikiData.query?.pages?.[pageId];
+
+    if (!page || page.missing) {
+      throw new Error('Wikipedia page not found');
+    }
+
+    // Format as a figure object
+    const figure = {
+      wikipediaId: `wiki_${pageId}`,
+      name: page.title,
+      description: page.extract || 'No description available.',
+      imageUrl: page.thumbnail?.source || '',
+      source: 'Wikipedia',
+      sourceUrl: page.fullurl || `https://en.wikipedia.org/wiki/${encodeURIComponent(page.title)}`,
+      likes: 0,
+      tags: [],
+      occupation: [],
+      categories: [],
+    };
 
     performanceTracker.end('getFigureByWikipediaId');
-    return data;
+    console.log("✅ Fetched figure from Wikipedia:", figure.name);
+    return figure;
 
   } catch (error) {
     performanceTracker.end('getFigureByWikipediaId');
