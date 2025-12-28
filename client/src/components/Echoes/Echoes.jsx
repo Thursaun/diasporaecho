@@ -23,13 +23,21 @@ const categories = [
 const FIGURES_PER_PAGE = 12;
 const INITIAL_LOAD = 8; // Load only 8 cards initially for faster rendering
 
-function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigures = [], currentUser }) {
+function Echoes({ 
+  onLikeFigureClick, 
+  onSaveFigureClick, 
+  onLoginClick, 
+  savedFigures = [], 
+  currentUser,
+  allFigures: propAllFigures = [],  // SYNERGY: Receive from App.jsx
+  setAllFigures: propSetAllFigures  // SYNERGY: Receive from App.jsx
+}) {
   // =============================================================================
-  // STATE MANAGEMENT: Optimized for performance
+  // STATE MANAGEMENT: Use App.jsx state if available, else local state
   // =============================================================================
 
-  // PERFORMANCE: Check localStorage for cached figures on mount to avoid loading flash
-  const [allFigures, setAllFigures] = useState(() => {
+  // SYNERGY: Use props if available, otherwise fall back to local state
+  const [localFigures, setLocalFigures] = useState(() => {
     try {
       const cached = localStorage.getItem('diaspora_figures');
       if (cached) {
@@ -39,8 +47,13 @@ function Echoes({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigur
     } catch (e) { /* ignore */ }
     return [];
   });
-  // Only show loading if we have NO cached data
-  const [loading, setLoading] = useState(() => !localStorage.getItem('diaspora_figures'));
+
+  // Use App's state if available, else local state
+  const allFigures = propAllFigures.length > 0 ? propAllFigures : localFigures;
+  const setAllFigures = propSetAllFigures || setLocalFigures;
+
+  // Only show loading if we have NO figures at all
+  const [loading, setLoading] = useState(() => allFigures.length === 0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [activeCategory, setActiveCategory] = useState("all");

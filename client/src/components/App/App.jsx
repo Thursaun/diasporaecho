@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState, lazy, Suspense, useCallback } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import Header from "../Header/Header";
 import Login from "../ModalWithForms/Login";
@@ -33,6 +33,51 @@ const App = () => {
   const [savedFigures, setSavedFigures] = useState([]);
   const [pendingSaveAction, setPendingSaveAction] = useState(false);
   const [pendingLikeAction, setPendingLikeAction] = useState(false);
+  
+  // SYNERGY: Centralized state for all figures (Echoes gallery)
+  const [allFigures, setAllFigures] = useState([]);
+
+  // SYNERGY: Update a figure in all state locations
+  const updateFigure = useCallback((figureId, updates) => {
+    const matchesFigure = (f) => 
+      f._id === figureId || f.wikipediaId === figureId;
+    
+    setAllFigures(prev => prev.map(f => 
+      matchesFigure(f) ? { ...f, ...updates } : f
+    ));
+    setSavedFigures(prev => prev.map(f => 
+      matchesFigure(f) ? { ...f, ...updates } : f
+    ));
+    setFigures(prev => prev.map(f => 
+      matchesFigure(f) ? { ...f, ...updates } : f
+    ));
+    if (selectedFigure && matchesFigure(selectedFigure)) {
+      setSelectedFigure(prev => ({ ...prev, ...updates }));
+    }
+    // Clear localStorage cache so next page load gets fresh data
+    localStorage.removeItem('diaspora_figures');
+    localStorage.removeItem('diaspora_figures_ts');
+  }, [selectedFigure]);
+
+  // SYNERGY: Add a new figure to allFigures
+  const addFigure = useCallback((newFigure) => {
+    setAllFigures(prev => {
+      // Check if already exists
+      const exists = prev.some(f => 
+        f._id === newFigure._id || f.wikipediaId === newFigure.wikipediaId
+      );
+      if (exists) {
+        return prev.map(f => 
+          (f._id === newFigure._id || f.wikipediaId === newFigure.wikipediaId) 
+            ? newFigure : f
+        );
+      }
+      return [newFigure, ...prev];
+    });
+    // Clear localStorage cache
+    localStorage.removeItem('diaspora_figures');
+    localStorage.removeItem('diaspora_figures_ts');
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -197,6 +242,8 @@ const App = () => {
           ...prevSavedFigures,
           savedFigureResponse,
         ]);
+        // SYNERGY: Add to allFigures so it appears on Echoes immediately
+        addFigure(savedFigureResponse);
         fetchSavedFigures();
       })
       .catch((err) => {
@@ -242,47 +289,12 @@ const App = () => {
     .then((updatedFigure) => {
       console.log("Like response:", updatedFigure);
 
-      setFigures((prevFigures) =>
-        prevFigures.map((fig) =>
-          (fig._id || fig.wikipediaId || fig.id) === figureId
-            ? {
-                ...fig,
-                likes: updatedFigure.likes,
-                likedBy: updatedFigure.likedBy,
-              }
-            : fig
-        )
-      );
-
-      setSavedFigures((prevSaved) =>
-        prevSaved.map((fig) =>
-          (fig._id || fig.wikipediaId || fig.id) === figureId
-            ? {
-                ...fig,
-                likes: updatedFigure.likes,
-                likedBy: updatedFigure.likedBy,
-              }
-            : fig
-        )
-      );
-
-      setSelectedFigure((prevSelected) => {
-        if (
-          prevSelected &&
-          (prevSelected._id === figureId ||
-            prevSelected.wikipediaId === figureId ||
-            prevSelected.id === figureId)
-        ) {
-          console.log("Updating selectedFigure with new likes:", updatedFigure.likes);
-          return {
-            ...prevSelected,
-            likes: updatedFigure.likes,
-            likedBy: updatedFigure.likedBy,
-          };
-        }
-        return prevSelected;
+      // SYNERGY: Use updateFigure to propagate changes everywhere
+      updateFigure(figureId, {
+        likes: updatedFigure.likes,
+        likedBy: updatedFigure.likedBy,
+        _id: updatedFigure._id, // Ensure we have the DB id
       });
-      fetchSavedFigures();
 
       // Return the updated figure for child components
       return updatedFigure;
@@ -311,10 +323,12 @@ const App = () => {
                   figures={figures}
                   selectedFigure={selectedFigure}
                   savedFigures={savedFigures}
+                  allFigures={allFigures}
                   onSaveFigureClick={handleSaveFigureClick}
                   onLikeFigureClick={handleLikeFigureClick}
                   onLoginClick={() => openModal("login")}
                   currentUser={currentUser}
+                  updateFigure={updateFigure}
                 />
               }
             />
@@ -323,6 +337,8 @@ const App = () => {
               element={
                 <Echoes
                   savedFigures={savedFigures}
+                  allFigures={allFigures}
+                  setAllFigures={setAllFigures}
                   onSaveFigureClick={handleSaveFigureClick}
                   onLikeFigureClick={handleLikeFigureClick}
                   onLoginClick={() => openModal("login")}
