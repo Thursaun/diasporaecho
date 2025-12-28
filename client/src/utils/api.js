@@ -546,6 +546,25 @@ const getFigureByWikipediaId = async (wikipediaId) => {
       categories: [],
     };
 
+    // AUTO-SAVE: Save to database on first view so it integrates into the system
+    // This enables like/save and shows up in Echoes gallery
+    console.log("💾 Auto-saving Wikipedia figure to database:", figure.name);
+    try {
+      const savedFigure = await fetch(`${BASE_URL}/figures/save`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(figure),
+      }).then(res => res.ok ? res.json() : null);
+
+      if (savedFigure) {
+        console.log("✅ Figure saved to database:", savedFigure.name);
+        performanceTracker.end('getFigureByWikipediaId');
+        return savedFigure; // Return the saved version with _id
+      }
+    } catch (saveError) {
+      console.warn("⚠️ Could not auto-save (user may not be logged in):", saveError.message);
+    }
+
     performanceTracker.end('getFigureByWikipediaId');
     console.log("✅ Fetched figure from Wikipedia:", figure.name);
     return figure;
