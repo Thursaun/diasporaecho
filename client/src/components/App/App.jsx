@@ -222,7 +222,10 @@ const App = () => {
   console.log("Liking figure with ID:", figureId);
 
   // If this is a Wikipedia-only figure (not saved to DB yet), save it first
-  if (figure._source === 'wikipedia') {
+  // FIX: Check source, _source, OR if the figure lacks _id (Wikipedia results don't have _id)
+  const isWikipediaOnly = figure.source === 'Wikipedia' || figure._source === 'wikipedia' || (!figure._id && figure.wikipediaId);
+  
+  if (isWikipediaOnly) {
     console.log("Figure is from Wikipedia, saving to DB first...");
     try {
       const savedFig = await saveFigure(figure);
