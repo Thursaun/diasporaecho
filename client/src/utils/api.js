@@ -534,6 +534,10 @@ const likeFigure = async (id) => {
     // PERFORMANCE: Clear relevant cache entries after like action
     clearCacheByPattern('/figures');
 
+    // FIX: Clear localStorage cache so updated likes appear across pages
+    localStorage.removeItem('diaspora_figures');
+    localStorage.removeItem('diaspora_figures_ts');
+
     return data;
 
   } catch (error) {
@@ -605,6 +609,11 @@ const saveFigure = async (figure) => {
 
     // PERFORMANCE: Clear cache after save operation
     clearCacheByPattern('/saved');
+
+    // FIX: Also clear localStorage cache so Echoes page shows new figures
+    localStorage.removeItem('diaspora_figures');
+    localStorage.removeItem('diaspora_figures_ts');
+    console.log('🗑️ Cleared localStorage figures cache after save');
 
     return data;
 
