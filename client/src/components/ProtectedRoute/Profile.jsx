@@ -80,6 +80,13 @@ function Profile({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigu
     return true; 
   };
 
+  // Check if figure is liked by current user
+  const isFigureLiked = (figure) => {
+    if (!currentUser || !figure) return false;
+    const likedBy = figure.likedBy || [];
+    return likedBy.includes(currentUser._id);
+  };
+
   if (!currentUser) {
     return null; 
   }
@@ -255,6 +262,7 @@ function Profile({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigu
                   onLikeFigureClick={() => onLikeFigureClick(figure)}
                   onLoginClick={onLoginClick}
                   isSaved={isFigureSaved(figure)}
+                  isLiked={isFigureLiked(figure)}
                 />
               );
             })}
