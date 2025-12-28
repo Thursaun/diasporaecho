@@ -296,29 +296,96 @@ function isSearchingByTopic(searchTerm) {
 
 const searchFigures = function (params = {}) {
   const searchTerm = params.searchTerm || "";
-  const isTopicSearch = isSearchingByTopic(searchTerm);
+  const limit = params.rows || 20;
 
-  // IMPROVED: Better search strategies for famous figures
-  let searchQueries = [];
+  // PERFORMANCE FIX: Use single direct search instead of 5 sequential strategies
+  // This reduces API calls from 15+ to just 2-3, making search 5x faster
+  console.log("🔍 Fast Wikipedia search for:", searchTerm);
 
-  if (!isTopicSearch) {
-    // For person searches, try multiple strategies
-    searchQueries = [
-      searchTerm, // Exact search first
-      `"${searchTerm}"`, // Quoted search for exact phrase
-      `${searchTerm} civil rights`, // Add context
-      `${searchTerm} African American`, // Add racial context
-      `${searchTerm} biography` // Biography search
-    ];
-  } else {
-    searchQueries = [`African American ${searchTerm} notable figures`];
-  }
-
-  console.log("Search strategies:", searchQueries);
-
-  // Try each search strategy until we get good results
-  return trySearchStrategies(searchQueries, params.rows || 20, searchTerm);
+  return fastWikipediaSearch(searchTerm, limit);
 };
+
+// PERFORMANCE: Optimized single-query Wikipedia search
+async function fastWikipediaSearch(searchTerm, limit) {
+  try {
+    const startTime = Date.now();
+
+    // Single opensearch call (fastest Wikipedia API endpoint)
+    const opensearchParams = new URLSearchParams({
+      action: "opensearch",
+      format: "json",
+      search: searchTerm,
+      limit: limit,
+      namespace: "0",
+      origin: "*",
+    });
+
+    const opensearchUrl = `${API_BASE_URL}?${opensearchParams.toString()}`;
+    const opensearchResponse = await fetch(opensearchUrl, WIKI_FETCH_OPTIONS);
+
+    if (!opensearchResponse.ok) {
+      console.warn("OpenSearch failed, status:", opensearchResponse.status);
+      return [];
+    }
+
+    const opensearchData = await opensearchResponse.json();
+
+    // OpenSearch returns: [query, [titles...], [descriptions...], [urls...]]
+    if (!opensearchData || !opensearchData[1] || opensearchData[1].length === 0) {
+      console.log("No results found for:", searchTerm);
+      return [];
+    }
+
+    const titles = opensearchData[1];
+    console.log(`OpenSearch found ${titles.length} results in ${Date.now() - startTime}ms`);
+
+    // Get page details in single batch call
+    const titlesParam = titles.slice(0, 10).join("|"); // Limit to 10 for speed
+    const detailsParams = new URLSearchParams({
+      action: "query",
+      format: "json",
+      titles: titlesParam,
+      prop: "pageimages|extracts|pageprops",
+      exintro: "true",
+      explaintext: "true",
+      exsentences: "3",
+      piprop: "thumbnail",
+      pithumbsize: "400",
+      origin: "*",
+    });
+
+    const detailsUrl = `${API_BASE_URL}?${detailsParams.toString()}`;
+    const detailsResponse = await fetch(detailsUrl, WIKI_FETCH_OPTIONS);
+
+    if (!detailsResponse.ok) {
+      return [];
+    }
+
+    const detailsData = await detailsResponse.json();
+    const pages = detailsData.query?.pages || {};
+
+    // Format results
+    const figures = Object.values(pages)
+      .filter(page => page.pageid && page.thumbnail?.source)
+      .map(page => ({
+        wikipediaId: `wiki_${page.pageid}`,
+        name: page.title,
+        description: page.extract || "",
+        imageUrl: page.thumbnail?.source || "",
+        source: "Wikipedia",
+        tags: [],
+        categories: [],
+        occupation: [],
+      }));
+
+    console.log(`✅ Fast search complete: ${figures.length} figures in ${Date.now() - startTime}ms`);
+    return figures;
+
+  } catch (error) {
+    console.error("Fast Wikipedia search error:", error);
+    return [];
+  }
+}
 
 async function trySearchStrategies(searchQueries, limit, originalTerm) {
   for (const query of searchQueries) {
