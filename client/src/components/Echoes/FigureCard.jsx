@@ -16,6 +16,7 @@ const FigureCard = memo(function FigureCard({
   onLoginClick,
   priority = false, // PERFORMANCE: Priority loading for above-the-fold images
   badge = null, // New prop for external badges (e.g., Featured, Rank)
+  hideInteractions = false, // Hide like/save buttons (for search results)
 }) {
   // =============================================================================
   // HOOKS & STATE: Optimized for performance
@@ -300,14 +301,16 @@ const FigureCard = memo(function FigureCard({
             </div>
             <div className="flex flex-col items-end gap-2 pointer-events-auto">
                {badge && <div className="mb-0.5">{badge}</div>}
-               <button onClick={handleLikeClick} onMouseEnter={handleButtonMouseEnter} onMouseLeave={handleButtonMouseLeave} className={`flex flex-col items-center gap-1 transition-all duration-150 ${isLiked ? "scale-110" : "opacity-90 hover:scale-110"}`}>
-                  <div className={`p-2.5 rounded-full shadow-lg border ${isLiked ? "bg-secondary text-white border-secondary" : "bg-white/20 text-white border-white/20"}`}>
-                     <svg viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-                       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                     </svg>
-                  </div>
-                  <span className="text-xs font-bold text-white bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-sm">{likes}</span>
-               </button>
+               {!hideInteractions && (
+                 <button onClick={handleLikeClick} onMouseEnter={handleButtonMouseEnter} onMouseLeave={handleButtonMouseLeave} className={`flex flex-col items-center gap-1 transition-all duration-150 ${isLiked ? "scale-110" : "opacity-90 hover:scale-110"}`}>
+                   <div className={`p-2.5 rounded-full shadow-lg border ${isLiked ? "bg-secondary text-white border-secondary" : "bg-white/20 text-white border-white/20"}`}>
+                      <svg viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                      </svg>
+                   </div>
+                   <span className="text-xs font-bold text-white bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-sm">{likes}</span>
+                 </button>
+               )}
             </div>
           </div>
 
@@ -348,49 +351,53 @@ const FigureCard = memo(function FigureCard({
                       </svg>
                    </button>
 
-                 {isLoggedIn ? (
+                 {!hideInteractions && (
                    <>
-                     <button
-                       onClick={handleSaveClick}
-                       onMouseEnter={handleButtonMouseEnter}
-                       onMouseLeave={handleButtonMouseLeave}
-                       className={`group/btn inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3.5 py-2 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-all duration-150 shadow-sm hover:shadow-md min-h-[44px] sm:min-h-0 ${
-                         isSaved
-                           ? "bg-white text-gray-900 border border-white hover:bg-white/90"
-                           : "bg-white/15 backdrop-blur-md text-white border border-white/20 hover:bg-white/25 hover:border-white/30"
-                       }`}
-                       aria-label={isSaved ? `Remove ${name} from saved` : `Save ${name}`}
-                     >
-                       <svg
-                         xmlns="http://www.w3.org/2000/svg"
-                         width="16"
-                         height="16"
-                         viewBox="0 0 24 24"
-                         fill={isSaved ? "currentColor" : "none"}
-                         stroke="currentColor"
-                         strokeWidth="2"
-                         strokeLinecap="round"
-                         strokeLinejoin="round"
-                         className="transition-transform group-hover/btn:scale-110 sm:w-[14px] sm:h-[14px]"
+                     {isLoggedIn ? (
+                       <>
+                         <button
+                           onClick={handleSaveClick}
+                           onMouseEnter={handleButtonMouseEnter}
+                           onMouseLeave={handleButtonMouseLeave}
+                           className={`group/btn inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3.5 py-2 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-all duration-150 shadow-sm hover:shadow-md min-h-[44px] sm:min-h-0 ${
+                             isSaved
+                               ? "bg-white text-gray-900 border border-white hover:bg-white/90"
+                               : "bg-white/15 backdrop-blur-md text-white border border-white/20 hover:bg-white/25 hover:border-white/30"
+                           }`}
+                           aria-label={isSaved ? `Remove ${name} from saved` : `Save ${name}`}
+                         >
+                           <svg
+                             xmlns="http://www.w3.org/2000/svg"
+                             width="16"
+                             height="16"
+                             viewBox="0 0 24 24"
+                             fill={isSaved ? "currentColor" : "none"}
+                             stroke="currentColor"
+                             strokeWidth="2"
+                             strokeLinecap="round"
+                             strokeLinejoin="round"
+                             className="transition-transform group-hover/btn:scale-110 sm:w-[14px] sm:h-[14px]"
+                           >
+                             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2-2z"></path>
+                           </svg>
+                           <span className="hidden xs:inline">{isSaved ? "Saved" : "Save"}</span>
+                         </button>
+                       </>
+                     ) : (
+                       <button
+                         onClick={handleLoginClick}
+                         onMouseEnter={handleButtonMouseEnter}
+                         onMouseLeave={handleButtonMouseLeave}
+                         className="group/btn inline-flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 bg-white/15 backdrop-blur-md text-white rounded-lg border border-white/20 hover:bg-white/25 hover:border-white/30 transition-all duration-300 text-[10px] sm:text-xs font-semibold shadow-sm hover:shadow-md min-h-[44px] sm:min-h-0"
+                         aria-label="Sign in to interact with figures"
                        >
-                         <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2-2z"></path>
-                       </svg>
-                       <span className="hidden xs:inline">{isSaved ? "Saved" : "Save"}</span>
-                     </button>
+                         <svg className="w-3.5 h-3.5 transition-transform group-hover/btn:scale-110" fill="currentColor" viewBox="0 0 20 20">
+                           <path fillRule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clipRule="evenodd" />
+                         </svg>
+                         Sign in
+                       </button>
+                     )}
                    </>
-                 ) : (
-                   <button
-                     onClick={handleLoginClick}
-                     onMouseEnter={handleButtonMouseEnter}
-                     onMouseLeave={handleButtonMouseLeave}
-                     className="group/btn inline-flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 bg-white/15 backdrop-blur-md text-white rounded-lg border border-white/20 hover:bg-white/25 hover:border-white/30 transition-all duration-300 text-[10px] sm:text-xs font-semibold shadow-sm hover:shadow-md min-h-[44px] sm:min-h-0"
-                     aria-label="Sign in to interact with figures"
-                   >
-                     <svg className="w-3.5 h-3.5 transition-transform group-hover/btn:scale-110" fill="currentColor" viewBox="0 0 20 20">
-                       <path fillRule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clipRule="evenodd" />
-                     </svg>
-                     Sign in
-                   </button>
                  )}
                </div>
              </div>

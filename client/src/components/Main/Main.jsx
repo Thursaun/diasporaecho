@@ -385,6 +385,7 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
                       onLoginClick={onLoginClick}
                       isSaved={checkIsSaved(figure)}
                       isLiked={checkIsLiked(figure)}
+                      hideInteractions={true}
                     />
                   </div>
                 ))}
