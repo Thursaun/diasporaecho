@@ -260,6 +260,25 @@ const App = () => {
     return Promise.reject(new Error("User not logged in"));
   }
 
+  // If this is a Wikipedia-only figure (not saved to DB yet), ensure it's in DB first
+  // FIX: Check source, _source, OR if the figure lacks valid MongoDB _id
+  const isValidObjectId = figure._id && /^[0-9a-fA-F]{24}$/.test(figure._id);
+  const isWikipediaOnly = figure.source === 'Wikipedia' || figure._source === 'wikipedia' || (!isValidObjectId && figure.wikipediaId);
+  
+  if (isWikipediaOnly) {
+    console.log("Figure is from Wikipedia, ensuring in DB first...");
+    try {
+      const dbFigure = await ensureFigureInDB(figure);
+      console.log("✅ Figure ensured in DB:", dbFigure.name, "ID:", dbFigure._id);
+      // Update figure reference with DB version
+      figure = dbFigure;
+    } catch (err) {
+      console.error("❌ Error ensuring figure in DB:", err);
+      // Continue trying to like anyway - might already exist
+    }
+  }
+
+  // Get the ID AFTER ensuring figure is in DB (this will now have the real _id)
   const figureId = figure._id || figure.wikipediaId || figure.id;
 
   if (!figureId) {
@@ -268,23 +287,6 @@ const App = () => {
   }
 
   console.log("Liking figure with ID:", figureId);
-
-  // If this is a Wikipedia-only figure (not saved to DB yet), save it first
-  // FIX: Check source, _source, OR if the figure lacks _id (Wikipedia results don't have _id)
-  const isWikipediaOnly = figure.source === 'Wikipedia' || figure._source === 'wikipedia' || (!figure._id && figure.wikipediaId);
-  
-  if (isWikipediaOnly) {
-    console.log("Figure is from Wikipedia, ensuring in DB first...");
-    try {
-      const dbFigure = await ensureFigureInDB(figure);
-      console.log("✅ Figure ensured in DB:", dbFigure.name);
-      // Update figure reference with DB version
-      figure = dbFigure;
-    } catch (err) {
-      console.error("❌ Error ensuring figure in DB:", err);
-      // Continue trying to like anyway - might already exist
-    }
-  }
 
   return likeFigure(figureId)
     .then((updatedFigure) => {
