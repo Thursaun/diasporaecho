@@ -10,6 +10,7 @@ const {
   saveFigure,
   unsaveFigure,
   searchFigures,
+  ensureFigure,
 } = require("../controllers/figures");
 
 
@@ -19,6 +20,7 @@ router.get("/search", searchFigures);
 router.get("/wiki/:wikipediaId", getFigureByWikipediaId);
 router.get("/:id", getFigureById);
 
+router.post("/ensure", ensureFigure); // No auth - creates figure without user association
 router.post("/save", auth, saveFigure);
 router.delete("/unsave/:figureId", auth, unsaveFigure);
 router.post("/:figureId/like", auth, likeFigure);

@@ -698,6 +698,59 @@ const saveFigure = async (figure) => {
 };
 
 /**
+ * Ensure a figure exists in the database (for like/save to work)
+ * Does NOT add to user's collection - just ensures DB record exists
+ * @param {object} figure - Figure data to ensure exists
+ * @returns {Promise} - The figure with valid MongoDB _id
+ */
+const ensureFigureInDB = async (figure) => {
+  try {
+    performanceTracker.start('ensureFigureInDB');
+
+    // If already has valid MongoDB _id, return as-is
+    if (figure._id && /^[0-9a-fA-F]{24}$/.test(figure._id)) {
+      console.log('✅ Figure already has valid DB _id:', figure._id);
+      performanceTracker.end('ensureFigureInDB');
+      return figure;
+    }
+
+    console.log('📥 Ensuring figure exists in DB:', figure.name);
+
+    const response = await fetch(`${BASE_URL}/figures/ensure`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        wikipediaId: figure.wikipediaId,
+        name: figure.name,
+        description: figure.description,
+        imageUrl: figure.imageUrl || figure.image,
+        years: figure.years,
+        source: figure.source || 'Wikipedia',
+        sourceUrl: figure.sourceUrl,
+        tags: figure.tags || [],
+        occupation: figure.occupation || [],
+        categories: figure.categories || ['Scholars & Educators'],
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const dbFigure = await response.json();
+    console.log('✅ Figure ensured in DB with _id:', dbFigure._id);
+
+    performanceTracker.end('ensureFigureInDB');
+    return dbFigure;
+
+  } catch (error) {
+    performanceTracker.end('ensureFigureInDB');
+    console.error('❌ Error ensuring figure in DB:', error);
+    throw error;
+  }
+};
+
+/**
  * Unsave a figure
  * PERFORMANCE IMPROVEMENTS:
  * - Quick DELETE operation
@@ -871,6 +924,7 @@ export {
   getSavedFigures,
   saveFigure,
   unsaveFigure,
+  ensureFigureInDB,
 
   // Utility functions
   matchToCategory,

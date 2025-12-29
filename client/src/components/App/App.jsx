@@ -18,6 +18,7 @@ import {
   unsaveFigure,
   saveFigure,
   likeFigure,
+  ensureFigureInDB,
 } from "../../utils/api";
 import ModalWithForm from "../ModalWithForms/ModalWithForm";
 
@@ -273,14 +274,14 @@ const App = () => {
   const isWikipediaOnly = figure.source === 'Wikipedia' || figure._source === 'wikipedia' || (!figure._id && figure.wikipediaId);
   
   if (isWikipediaOnly) {
-    console.log("Figure is from Wikipedia, saving to DB first...");
+    console.log("Figure is from Wikipedia, ensuring in DB first...");
     try {
-      const savedFig = await saveFigure(figure);
-      console.log("✅ Figure saved to DB:", savedFig.name);
-      // Update figure reference with saved version
-      figure = savedFig;
+      const dbFigure = await ensureFigureInDB(figure);
+      console.log("✅ Figure ensured in DB:", dbFigure.name);
+      // Update figure reference with DB version
+      figure = dbFigure;
     } catch (err) {
-      console.error("❌ Error saving figure before like:", err);
+      console.error("❌ Error ensuring figure in DB:", err);
       // Continue trying to like anyway - might already exist
     }
   }

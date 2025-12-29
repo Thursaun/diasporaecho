@@ -164,7 +164,6 @@ const getFigureByWikipediaId = async (req, res, next) => {
       }
       // Return unsaved version if save failed
       return res.status(200).json({
-        _id: wikipediaId,
         wikipediaId: wikipediaId,
         name: page.title,
         description: page.extract || "No description available",
@@ -546,6 +545,68 @@ const searchFigures = async (req, res, next) => {
   }
 };
 
+/**
+ * Ensure a figure exists in the database (no user association)
+ * Used for like/save operations on Wikipedia figures
+ */
+const ensureFigure = async (req, res, next) => {
+  try {
+    const figureData = req.body;
+    const wikipediaId = figureData.wikipediaId;
+
+    console.log('📥 Ensuring figure in DB:', figureData.name);
+
+    if (!wikipediaId) {
+      return res.status(400).json({ message: 'wikipediaId is required' });
+    }
+
+    // Check if figure already exists
+    let figure = await Figure.findOne({ wikipediaId });
+
+    if (figure) {
+      console.log('✅ Figure already exists in DB:', figure.name, figure._id);
+      return res.status(200).json(figure);
+    }
+
+    // Create new figure without owners (not saved to any user's collection)
+    figure = new Figure({
+      wikipediaId: wikipediaId,
+      name: figureData.name,
+      description: figureData.description || '',
+      imageUrl: figureData.imageUrl || '',
+      years: figureData.years || '',
+      source: figureData.source || 'Wikipedia',
+      sourceUrl: figureData.sourceUrl || '',
+      tags: figureData.tags || [],
+      occupation: figureData.occupation || [],
+      categories: figureData.categories || ['Scholars & Educators'],
+      owners: [],  // No user association
+      likes: 0,
+      likedBy: [],
+    });
+
+    await figure.save();
+    console.log('✅ Created new figure in DB:', figure.name, figure._id);
+
+    // Clear cache so new figure appears
+    cacheService.invalidatePattern('figures');
+
+    res.status(201).json(figure);
+  } catch (error) {
+    console.error('Error ensuring figure:', error);
+
+    // Handle duplicate key error (race condition)
+    if (error.code === 11000) {
+      const figure = await Figure.findOne({ wikipediaId: req.body.wikipediaId });
+      if (figure) {
+        return res.status(200).json(figure);
+      }
+    }
+
+    next(error);
+  }
+};
+
 module.exports = {
   getFigures,
   saveFigure,
@@ -555,4 +616,5 @@ module.exports = {
   getFigureByWikipediaId,
   getFeaturedFigures,
   searchFigures,
+  ensureFigure,
 };
