@@ -61,11 +61,23 @@ const getFigureById = (req, res, next) => {
 };
 
 const getFigureByWikipediaId = async (req, res, next) => {
-  const { wikipediaId } = req.params;
+  const rawWikipediaId = req.params.wikipediaId;
 
   try {
-    // First try to find in local database
-    let figure = await Figure.findOne({ wikipediaId });
+    // Normalize the ID - could come in as "12345" or "wiki_12345"
+    const hasWikiPrefix = rawWikipediaId.startsWith('wiki_');
+    const numericId = hasWikiPrefix ? rawWikipediaId.replace('wiki_', '') : rawWikipediaId;
+    const prefixedId = hasWikiPrefix ? rawWikipediaId : `wiki_${rawWikipediaId}`;
+
+    console.log(`📝 Looking up figure: raw="${rawWikipediaId}", numeric="${numericId}", prefixed="${prefixedId}"`);
+
+    // Try to find in local database - check both formats
+    let figure = await Figure.findOne({
+      $or: [
+        { wikipediaId: numericId },
+        { wikipediaId: prefixedId }
+      ]
+    });
 
     if (figure) {
       console.log('Got figure from DB:', figure.name);
@@ -74,8 +86,8 @@ const getFigureByWikipediaId = async (req, res, next) => {
       return res.status(200).json(figure);
     }
 
-    // If not in DB, fetch from Wikipedia API
-    console.log(`📝 Figure ${wikipediaId} not in DB, fetching from Wikipedia...`);
+    // If not in DB, fetch from Wikipedia API using numeric ID
+    console.log(`📝 Figure ${rawWikipediaId} not in DB, fetching from Wikipedia...`);
 
     const WIKI_FETCH_OPTIONS = {
       headers: {
@@ -83,17 +95,17 @@ const getFigureByWikipediaId = async (req, res, next) => {
       }
     };
 
-    // Fetch from Wikipedia using page ID
-    const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&format=json&pageids=${wikipediaId}&prop=extracts|pageimages|info&exintro=1&explaintext=1&piprop=original|thumbnail&pithumbsize=800&inprop=url&origin=*`;
+    // Fetch from Wikipedia using numeric page ID only
+    const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&format=json&pageids=${numericId}&prop=extracts|pageimages|info&exintro=1&explaintext=1&piprop=original|thumbnail&pithumbsize=800&inprop=url&origin=*`;
 
     const response = await fetch(wikiUrl, WIKI_FETCH_OPTIONS);
     const data = await response.json();
 
-    if (!data.query || !data.query.pages || !data.query.pages[wikipediaId]) {
+    if (!data.query || !data.query.pages || !data.query.pages[numericId]) {
       throw new NotFoundError(ERROR_MESSAGES.FIGURE_NOT_FOUND);
     }
 
-    const page = data.query.pages[wikipediaId];
+    const page = data.query.pages[numericId];
 
     if (page.missing) {
       throw new NotFoundError(ERROR_MESSAGES.FIGURE_NOT_FOUND);
@@ -136,7 +148,7 @@ const getFigureByWikipediaId = async (req, res, next) => {
     console.log(`💾 Auto-saving ${page.title} to database...`);
 
     const newFigure = new Figure({
-      wikipediaId: wikipediaId,
+      wikipediaId: prefixedId, // Always store with wiki_ prefix for consistency
       name: page.title,
       description: page.extract || "No description available",
       imageUrl: page.original?.source || page.thumbnail?.source || "https://via.placeholder.com/300x400?text=No+Image",
@@ -144,7 +156,7 @@ const getFigureByWikipediaId = async (req, res, next) => {
       tags: [],
       contributions: [],
       source: "Wikipedia",
-      sourceUrl: page.fullurl || `https://en.wikipedia.org/?curid=${wikipediaId}`,
+      sourceUrl: page.fullurl || `https://en.wikipedia.org/?curid=${numericId}`,
       likes: 0,
       likedBy: [],
       categories: ["Scholars & Educators"],
@@ -157,14 +169,19 @@ const getFigureByWikipediaId = async (req, res, next) => {
       console.log(`✅ Auto-saved ${page.title} to database with ID: ${figure._id}`);
     } catch (saveErr) {
       console.warn(`⚠️ Could not auto-save figure (may already exist):`, saveErr.message);
-      // Try to find it again in case of race condition
-      figure = await Figure.findOne({ wikipediaId });
+      // Try to find it again in case of race condition - check both formats
+      figure = await Figure.findOne({
+        $or: [
+          { wikipediaId: numericId },
+          { wikipediaId: prefixedId }
+        ]
+      });
       if (figure) {
         return res.status(200).json(figure);
       }
       // Return unsaved version if save failed
       return res.status(200).json({
-        wikipediaId: wikipediaId,
+        wikipediaId: prefixedId,
         name: page.title,
         description: page.extract || "No description available",
         imageUrl: page.original?.source || page.thumbnail?.source,
