@@ -65,6 +65,31 @@ const FigureSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  // Moderation fields
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'approved', // Existing figures stay approved
+    index: true,
+  },
+  submittedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+  },
+  reviewedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+  },
+  reviewedAt: {
+    type: Date,
+    default: null,
+  },
+  rejectionReason: {
+    type: String,
+    default: null,
+  },
   // Multi-category support: figures can belong to multiple categories
   categories: {
     type: [String],

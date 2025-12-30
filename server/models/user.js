@@ -28,6 +28,11 @@ const UserSchema = new mongoose.Schema({
     select: false,
     minlength: 6,
   },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user',
+  },
   savedFigures: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Figure'

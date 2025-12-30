@@ -585,7 +585,7 @@ const ensureFigure = async (req, res, next) => {
       return res.status(200).json(figure);
     }
 
-    // Create new figure without owners (not saved to any user's collection)
+    // Create new figure - PENDING approval
     figure = new Figure({
       wikipediaId: wikipediaId,
       name: figureData.name,
@@ -597,9 +597,10 @@ const ensureFigure = async (req, res, next) => {
       tags: figureData.tags || [],
       occupation: figureData.occupation || [],
       categories: figureData.categories || ['Scholars & Educators'],
-      owners: [],  // No user association
+      owners: [],
       likes: 0,
       likedBy: [],
+      status: 'pending', // Requires admin approval
     });
 
     await figure.save();
@@ -624,6 +625,155 @@ const ensureFigure = async (req, res, next) => {
   }
 };
 
+/**
+ * Get pending figures for admin moderation queue
+ */
+const getPendingFigures = async (req, res, next) => {
+  try {
+    const figures = await Figure.find({ status: 'pending' })
+      .sort({ createdAt: -1 })
+      .populate('submittedBy', 'name email')
+      .lean();
+
+    console.log(`📋 Admin: Found ${figures.length} pending figures`);
+    res.status(200).json(figures);
+  } catch (error) {
+    console.error('Error fetching pending figures:', error);
+    next(error);
+  }
+};
+
+/**
+ * Approve a pending figure
+ */
+const approveFigure = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const figure = await Figure.findByIdAndUpdate(
+      id,
+      {
+        status: 'approved',
+        reviewedBy: req.user._id,
+        reviewedAt: new Date(),
+        rejectionReason: null,
+      },
+      { new: true }
+    );
+
+    if (!figure) {
+      return res.status(404).json({ message: 'Figure not found' });
+    }
+
+    // Clear cache so figure appears in listings
+    cacheService.invalidatePattern('figures');
+
+    console.log(`✅ Admin ${req.user.email} approved: ${figure.name}`);
+    res.status(200).json(figure);
+  } catch (error) {
+    console.error('Error approving figure:', error);
+    next(error);
+  }
+};
+
+/**
+ * Reject a pending figure
+ */
+const rejectFigure = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const figure = await Figure.findByIdAndUpdate(
+      id,
+      {
+        status: 'rejected',
+        reviewedBy: req.user._id,
+        reviewedAt: new Date(),
+        rejectionReason: reason || 'Not relevant to People of Color history',
+      },
+      { new: true }
+    );
+
+    if (!figure) {
+      return res.status(404).json({ message: 'Figure not found' });
+    }
+
+    console.log(`❌ Admin ${req.user.email} rejected: ${figure.name}`);
+    res.status(200).json(figure);
+  } catch (error) {
+    console.error('Error rejecting figure:', error);
+    next(error);
+  }
+};
+
+/**
+ * Bulk approve multiple figures
+ */
+const bulkApproveFigures = async (req, res, next) => {
+  try {
+    const { ids } = req.body; // Array of figure IDs, or empty for all pending
+
+    const query = ids && ids.length > 0
+      ? { _id: { $in: ids }, status: 'pending' }
+      : { status: 'pending' };
+
+    const result = await Figure.updateMany(
+      query,
+      {
+        status: 'approved',
+        reviewedBy: req.user._id,
+        reviewedAt: new Date(),
+        rejectionReason: null,
+      }
+    );
+
+    // Clear cache
+    cacheService.invalidatePattern('figures');
+
+    console.log(`✅ Admin ${req.user.email} bulk approved ${result.modifiedCount} figures`);
+    res.status(200).json({
+      message: `Approved ${result.modifiedCount} figures`,
+      count: result.modifiedCount
+    });
+  } catch (error) {
+    console.error('Error bulk approving:', error);
+    next(error);
+  }
+};
+
+/**
+ * Bulk reject multiple figures
+ */
+const bulkRejectFigures = async (req, res, next) => {
+  try {
+    const { ids, reason } = req.body;
+
+    const query = ids && ids.length > 0
+      ? { _id: { $in: ids }, status: 'pending' }
+      : { status: 'pending' };
+
+    const result = await Figure.updateMany(
+      query,
+      {
+        status: 'rejected',
+        reviewedBy: req.user._id,
+        reviewedAt: new Date(),
+        rejectionReason: reason || 'Not relevant to People of Color history',
+      }
+    );
+
+    console.log(`❌ Admin ${req.user.email} bulk rejected ${result.modifiedCount} figures`);
+    res.status(200).json({
+      message: `Rejected ${result.modifiedCount} figures`,
+      count: result.modifiedCount
+    });
+  } catch (error) {
+    console.error('Error bulk rejecting:', error);
+    next(error);
+  }
+};
+
 module.exports = {
   getFigures,
   saveFigure,
@@ -634,4 +784,9 @@ module.exports = {
   getFeaturedFigures,
   searchFigures,
   ensureFigure,
+  getPendingFigures,
+  approveFigure,
+  rejectFigure,
+  bulkApproveFigures,
+  bulkRejectFigures,
 };

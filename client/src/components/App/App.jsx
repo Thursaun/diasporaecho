@@ -10,6 +10,7 @@ const Echoes = lazy(() => import("../Echoes/Echoes"));
 const Profile = lazy(() => import("../ProtectedRoute/Profile"));
 const FigureDetail = lazy(() => import("../Echoes/FigureDetail"));
 const AboutUs = lazy(() => import("../About/About"));
+const AdminModerationPage = lazy(() => import("../Admin/AdminModerationPage"));
 
 import CurrentUserContext from "../../contexts/CurrentUserContext";
 import { checkToken, login, register } from "../../utils/auth";
@@ -377,6 +378,7 @@ const App = () => {
                 />
               }
             />
+            <Route path="/admin" element={<AdminModerationPage />} />
           </Routes>
         </Suspense>
 
