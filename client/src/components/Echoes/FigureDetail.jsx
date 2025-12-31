@@ -103,13 +103,26 @@ function FigureDetail({
         }
     }, [selectedFigure, id]);
 
-    const handleLikeClick = () => {
+    const handleLikeClick = async () => {
         if (!isLoggedIn) {
             if (onLoginClick) onLoginClick();
             return;
         }
         console.log("FigureDetail: Calling onLikeFigureClick with:", currentFigure);
-        onLikeFigureClick(currentFigure);
+        try {
+            const updatedFigure = await onLikeFigureClick(currentFigure);
+            // Update local figure state with new like data
+            if (updatedFigure) {
+                setFigure(prev => ({
+                    ...prev,
+                    likes: updatedFigure.likes,
+                    likedBy: updatedFigure.likedBy,
+                    _id: updatedFigure._id,
+                }));
+            }
+        } catch (err) {
+            console.error("Error liking figure:", err);
+        }
     };
 
     const handleSaveClick = () => {

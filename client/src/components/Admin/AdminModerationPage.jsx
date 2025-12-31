@@ -12,21 +12,18 @@ function AdminModerationPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [user, setUser] = useState(null);
 
   // Check if user is logged in (server validates admin role)
   useEffect(() => {
-    const token = localStorage.getItem('jwt');
+    const token = localStorage.getItem('token');
     if (!token) {
       navigate('/');
-      return;
     }
-    setUser({ loggedIn: true });
   }, [navigate]);
 
   const getHeaders = () => ({
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${localStorage.getItem('jwt')}`,
+    'Authorization': `Bearer ${localStorage.getItem('token')}`,
   });
 
   // Fetch pending figures
