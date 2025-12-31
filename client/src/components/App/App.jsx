@@ -4,6 +4,7 @@ import Header from "../Header/Header";
 import Login from "../ModalWithForms/Login";
 import Register from "../ModalWithForms/Register";
 import Loading from "../Loading/Loading";
+import Toast from "../Toast/Toast";
 
 const Main = lazy(() => import("../Main/Main"));
 const Echoes = lazy(() => import("../Echoes/Echoes"));
@@ -35,6 +36,17 @@ const App = () => {
   const [savedFigures, setSavedFigures] = useState([]);
   const [pendingSaveAction, setPendingSaveAction] = useState(false);
   const [pendingLikeAction, setPendingLikeAction] = useState(false);
+  
+  // Toast notification state
+  const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
+  
+  const showToast = (message, type = 'info') => {
+    setToast({ show: true, message, type });
+  };
+  
+  const hideToast = () => {
+    setToast({ show: false, message: '', type: 'info' });
+  };
   
   // SYNERGY: Centralized state for all figures (Echoes gallery)
   const [allFigures, setAllFigures] = useState([]);
@@ -236,6 +248,11 @@ const App = () => {
         console.error("❌ Error unsaving figure:", err);
       });
   } else {
+    // Check if this is a NEW figure not yet in our database
+    // (lacks valid MongoDB ObjectId = doesn't exist in DB yet)
+    const isValidObjectId = figure._id && /^[0-9a-fA-F]{24}$/.test(figure._id);
+    const isNewFigure = !isValidObjectId;
+    
     console.log("Saving new figure:", figure);
     saveFigure(figure)
       .then((savedFigureResponse) => {
@@ -247,6 +264,14 @@ const App = () => {
         // SYNERGY: Add to allFigures so it appears on Echoes immediately
         addFigure(savedFigureResponse);
         fetchSavedFigures();
+        
+        // Show moderation toast ONLY for new figures not in database
+        if (isNewFigure) {
+          showToast(
+            "✨ This is a new figure! Thank you for adding to the collection. It will be reviewed by an admin before being posted on the website.",
+            "pending"
+          );
+        }
       })
       .catch((err) => {
         console.error("❌ Error saving figure:", err);
@@ -414,6 +439,16 @@ const App = () => {
               </div>
             )}
           </ModalWithForm>
+        )}
+        
+        {/* Toast Notification */}
+        {toast.show && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={hideToast}
+            duration={6000}
+          />
         )}
       </div>
     </CurrentUserContext.Provider>
