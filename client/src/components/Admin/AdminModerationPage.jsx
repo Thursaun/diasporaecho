@@ -14,21 +14,14 @@ function AdminModerationPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [user, setUser] = useState(null);
 
-  // Check if user is admin
+  // Check if user is logged in (server validates admin role)
   useEffect(() => {
     const token = localStorage.getItem('jwt');
     if (!token) {
       navigate('/');
       return;
     }
-    
-    // Decode JWT to check role (basic check, server validates properly)
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      setUser(payload);
-    } catch {
-      navigate('/');
-    }
+    setUser({ loggedIn: true });
   }, [navigate]);
 
   const getHeaders = () => ({
