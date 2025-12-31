@@ -150,10 +150,13 @@ const FigureCard = memo(function FigureCard({
     
     console.log('🔗 Navigating to figure:', name, 'with ID:', navId);
     
+    // PERFORMANCE: Pass figure data via state to avoid re-fetching
+    const figureState = { figure };
+    
     if (_id) {
-      navigate(`/figures/${_id}`);
+      navigate(`/figures/${_id}`, { state: figureState });
     } else if (wikipediaId) {
-      navigate(`/figures/${wikipediaId}`);
+      navigate(`/figures/${wikipediaId}`, { state: figureState });
     }
   }, [_id, wikipediaId, figure, name, navigate, isFlipped]);
 

@@ -1,7 +1,10 @@
 import { useState, useEffect, useContext } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getFigureById, getFigureByWikipediaId } from '../../utils/api';
 import CurrentUserContext from "../../contexts/CurrentUserContext";
+
+// PERFORMANCE: Simple client-side cache for figure data
+const figureCache = new Map();
 
 function FigureDetail({
   onSaveFigureClick,
@@ -15,6 +18,7 @@ function FigureDetail({
     const isLoggedIn = !!currentUser;
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const [figure, setFigure] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -26,7 +30,7 @@ function FigureDetail({
       : figure;
 
     const isSaved = currentFigure && isLoggedIn ?
-        savedFigures.some((savedFigure) =>
+        savedFigures.some(savedFigure =>
           savedFigure.wikipediaId === currentFigure.wikipediaId ||
           savedFigure._id === currentFigure._id
         ) : false;
@@ -36,6 +40,30 @@ function FigureDetail({
         (currentFigure.likedBy || []).includes(currentUser._id) : false;
 
     useEffect(() => {
+        // PERFORMANCE: Check for passed figure data first (instant load!)
+        const passedFigure = location.state?.figure;
+        
+        if (passedFigure) {
+            console.log('⚡ INSTANT: Using passed figure data:', passedFigure.name);
+            setFigure(passedFigure);
+            setIsLoading(false);
+            document.title = `${passedFigure.name} | Diaspora Echoes`;
+            // Cache it for future use
+            figureCache.set(id, passedFigure);
+            return;
+        }
+
+        // PERFORMANCE: Check client-side cache
+        const cachedFigure = figureCache.get(id);
+        if (cachedFigure) {
+            console.log('⚡ CACHED: Using cached figure data:', cachedFigure.name);
+            setFigure(cachedFigure);
+            setIsLoading(false);
+            document.title = `${cachedFigure.name} | Diaspora Echoes`;
+            return;
+        }
+
+        // Fallback: Fetch from API (only for direct URL access)
         setIsLoading(true);
         setError(null);
 
@@ -49,6 +77,8 @@ function FigureDetail({
             .then(figureData => {
                 console.log("Fetched figure data:", figureData);
                 setFigure(figureData);
+                // Cache for future use
+                figureCache.set(id, figureData);
                 if (setSelectedFigure) {
                     setSelectedFigure(figureData);
                 }
@@ -64,7 +94,7 @@ function FigureDetail({
         return () => {
             document.title = 'Diaspora Echoes';
         };
-    }, [id, setSelectedFigure]);
+    }, [id, setSelectedFigure, location.state]);
 
     useEffect(() => {
         if (selectedFigure &&
