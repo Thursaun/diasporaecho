@@ -1,0 +1,193 @@
+🔄 Updating Figures with Missing Years
+
+================================================================================
+(node:43435) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+📊 Found 16 figures to update
+
+
+================================================================================
+
+📝 Processing: Malcolm X
+   Current years: Unknown
+   Wikipedia ID: 20796
+   🌐 Attempting Wikidata fetch...
+   🔍 Wikidata ID: Q43303
+   ✅ Wikidata: 1925-1965
+   💾 Updated in database: 1925-1965
+
+================================================================================
+
+📝 Processing: Martin Luther King Jr.
+   Current years: Unknown
+   Wikipedia ID: 20076
+   🌐 Attempting Wikidata fetch...
+   🔍 Wikidata ID: Q8027
+   ✅ Wikidata: 1929-1968
+   💾 Updated in database: 1929-1968
+
+================================================================================
+
+📝 Processing: Coretta Scott King
+   Current years: Unknown
+   Wikipedia ID: 436127
+   🌐 Attempting Wikidata fetch...
+   🔍 Wikidata ID: Q230969
+   ✅ Wikidata: 1927-2006
+   💾 Updated in database: 1927-2006
+
+================================================================================
+
+📝 Processing: Claudette Colvin
+   Current years: Unknown
+   Wikipedia ID: 147393
+   🌐 Attempting Wikidata fetch...
+   🔍 Wikidata ID: Q468897
+   ✅ Wikidata (birth only): 1939
+   💾 Updated in database: 1939
+
+================================================================================
+
+📝 Processing: Katherine Johnson
+   Current years: Unknown
+   Wikipedia ID: 25568315
+   🌐 Attempting Wikidata fetch...
+   🔍 Wikidata ID: Q11740
+   ✅ Wikidata: 1918-2020
+   💾 Updated in database: 1918-2020
+
+================================================================================
+
+📝 Processing: Nelson Mandela
+   Current years: Unknown
+   Wikipedia ID: 21492751
+   🌐 Attempting Wikidata fetch...
+   ❌ Error fetching Wikidata: invalid json response body at https://en.wikipedia.org/w/api.php?action=query&format=json&prop=pageprops&pageids=21492751&ppprop=wikibase_item&origin=* reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+   📝 Attempting to extract from description...
+   ✅ Extracted from text: 1918-2013
+   💾 Updated in database: 1918-2013
+
+================================================================================
+
+📝 Processing: James Baldwin
+   Current years: Unknown
+   Wikipedia ID: 176935
+   🌐 Attempting Wikidata fetch...
+   🔍 Wikidata ID: Q273210
+   ❌ Error fetching Wikidata: invalid json response body at https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q273210&props=claims&format=json&origin=* reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+   📝 Attempting to extract from description...
+   ✅ Extracted from text: 1924-1987
+   💾 Updated in database: 1924-1987
+
+================================================================================
+
+📝 Processing: Maya Angelou
+   Current years: Unknown
+   Wikipedia ID: 288140
+   🌐 Attempting Wikidata fetch...
+   ❌ Error fetching Wikidata: invalid json response body at https://en.wikipedia.org/w/api.php?action=query&format=json&prop=pageprops&pageids=288140&ppprop=wikibase_item&origin=* reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+   📝 Attempting to extract from description...
+   ✅ Extracted from text: 1928-2014
+   💾 Updated in database: 1928-2014
+
+================================================================================
+
+📝 Processing: George Washington Carver
+   Current years: Unknown
+   Wikipedia ID: 12997
+   🌐 Attempting Wikidata fetch...
+   🔍 Wikidata ID: Q296898
+   ❌ Error fetching Wikidata: invalid json response body at https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q296898&props=claims&format=json&origin=* reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+   📝 Attempting to extract from description...
+   ✅ Extracted from text: 1864-1943
+   💾 Updated in database: 1864-1943
+
+================================================================================
+
+📝 Processing: Frederick Douglass
+   Current years: Unknown
+   Wikipedia ID: 11033
+   🌐 Attempting Wikidata fetch...
+   ❌ Error fetching Wikidata: invalid json response body at https://en.wikipedia.org/w/api.php?action=query&format=json&prop=pageprops&pageids=11033&ppprop=wikibase_item&origin=* reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+   📝 Attempting to extract from description...
+   ✅ Extracted from text: 1818-1895
+   💾 Updated in database: 1818-1895
+
+================================================================================
+
+📝 Processing: Jean-Michel Basquiat
+   Current years: Unknown
+   Wikipedia ID: 15916
+   🌐 Attempting Wikidata fetch...
+   🔍 Wikidata ID: Q155407
+   ❌ Error fetching Wikidata: invalid json response body at https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q155407&props=claims&format=json&origin=* reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+   📝 Attempting to extract from description...
+   ✅ Extracted from text: 1960-1988
+   💾 Updated in database: 1960-1988
+
+================================================================================
+
+📝 Processing: W. E. B. Du Bois
+   Current years: Unknown
+   Wikipedia ID: 89988
+   🌐 Attempting Wikidata fetch...
+   ❌ Error fetching Wikidata: invalid json response body at https://en.wikipedia.org/w/api.php?action=query&format=json&prop=pageprops&pageids=89988&ppprop=wikibase_item&origin=* reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+   📝 Attempting to extract from description...
+   ✅ Extracted from text: 1868-1963
+   💾 Updated in database: 1868-1963
+
+================================================================================
+
+📝 Processing: Shirley Chisholm
+   Current years: Unknown
+   Wikipedia ID: 567269
+   🌐 Attempting Wikidata fetch...
+   🔍 Wikidata ID: Q239657
+   ❌ Error fetching Wikidata: invalid json response body at https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q239657&props=claims&format=json&origin=* reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+   📝 Attempting to extract from description...
+   ✅ Extracted from text: 1924-2005
+   💾 Updated in database: 1924-2005
+
+================================================================================
+
+📝 Processing: Muammar Gaddafi
+   Current years: Unknown
+   Wikipedia ID: 53029
+   🌐 Attempting Wikidata fetch...
+   ❌ Error fetching Wikidata: invalid json response body at https://en.wikipedia.org/w/api.php?action=query&format=json&prop=pageprops&pageids=53029&ppprop=wikibase_item&origin=* reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+   📝 Attempting to extract from description...
+   ✅ Extracted from text: 1942-2011
+   💾 Updated in database: 1942-2011
+
+================================================================================
+
+📝 Processing: Ibrahim Traoré
+   Current years: Unknown
+   Wikipedia ID: 71882148
+   🌐 Attempting Wikidata fetch...
+   🔍 Wikidata ID: Q114341246
+   ❌ Error fetching Wikidata: invalid json response body at https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q114341246&props=claims&format=json&origin=* reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+   📝 Attempting to extract from description...
+   ❌ Could not determine years
+
+================================================================================
+
+📝 Processing: Marcus Garvey
+   Current years: Unknown
+   Wikipedia ID: 181535
+   🌐 Attempting Wikidata fetch...
+   ❌ Error fetching Wikidata: invalid json response body at https://en.wikipedia.org/w/api.php?action=query&format=json&prop=pageprops&pageids=181535&ppprop=wikibase_item&origin=* reason: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+   📝 Attempting to extract from description...
+   ✅ Extracted from text: 1887-1940
+   💾 Updated in database: 1887-1940
+
+================================================================================
+
+✨ Update Complete!
+
+   ✅ Successfully updated: 15 figures
+   ❌ Failed to update: 1 figures
+   📈 Success rate: 94%
+
+🔌 Database connection closed
