@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@layer base {
+  html {
+    @apply text-dark bg-light;
+    overflow-x: hidden;
+  }
+  body {
+    overflow-x: hidden;
+    min-width: 320px;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  .container {
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+
+  h1 {
+    @apply text-4xl font-bold mb-4;
+  }
+  h2 {
+    @apply text-3xl font-bold mb-3;
+  }
+  h3 {
+    @apply text-2xl font-semibold mb-2;
+  }
+  p {
+    @apply mb-4;
+  }
+
+  input, textarea, select {
+    @apply w-full;
+    min-width: 0;
+  }
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* Custom component classes */
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded font-medium transition-colors duration-200;
+    min-width: 0;
+  }
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-opacity-90;
+  }
+  .btn-secondary {
+    @apply bg-secondary text-white hover:bg-opacity-90;
+  }
+  .card {
+    @apply bg-white rounded-lg shadow-md overflow-hidden;
+  }
+  .text-truncate {
+    @apply truncate;
+  }
+  .grid-responsive {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+}
+
+@layer utilities {
+  .overflow-x-hidden {
+    overflow-x: hidden;
+  }
+  .min-w-0 {
+    min-width: 0;
+  }
+  .text-responsive {
+    @apply text-sm md:text-base;
+  }
+  .text-responsive-lg {
+    @apply text-base md:text-lg;
+  }
+}
