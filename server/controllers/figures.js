@@ -220,13 +220,18 @@ const saveFigure = (req, res, next) => {
     return res.status(400).json({ message: "Figure name is required" });
   }
 
-  // FIX: Don't require wikipediaId in request, generate if missing
-  const wikipediaId = figureData.wikipediaId ||
+  // Normalize wikipediaId to wiki_ prefix format (single source of truth)
+  let rawWikipediaId = figureData.wikipediaId ||
     `custom_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  // Always normalize to wiki_ prefix for consistency (data migrated to this format)
+  const wikipediaId = rawWikipediaId.startsWith('wiki_') || rawWikipediaId.startsWith('custom_')
+    ? rawWikipediaId
+    : `wiki_${rawWikipediaId}`;
 
   console.log("Using wikipediaId:", wikipediaId);
 
-  // Check if figure already exists by wikipediaId
+  // Check if figure already exists (all data now uses wiki_ prefix)
   Figure.findOne({ wikipediaId })
     .then((existingFigure) => {
       if (existingFigure) {
@@ -238,19 +243,58 @@ const saveFigure = (req, res, next) => {
         return existingFigure;
       } else {
         console.log("Creating new figure with wikipediaId:", wikipediaId);
+
+        // VALID CATEGORIES: Sanitize to only allow valid enum values
+        const validCategories = [
+          "Scholars & Educators",
+          "Activists & Freedom Fighters",
+          "Political Leaders",
+          "Arts & Entertainment",
+          "Musicians",
+          "Inventors & Innovators",
+          "Athletes",
+          "Pan-African Leaders",
+          "Literary Icons",
+          "Business & Entrepreneurs",
+        ];
+
+        // Get categories from input, filter to only valid ones
+        let inputCategories = figureData.categories || (figureData.category ? [figureData.category] : []);
+        let sanitizedCategories = inputCategories.filter(cat => validCategories.includes(cat));
+
+        // Default to Scholars & Educators if no valid categories
+        if (sanitizedCategories.length === 0) {
+          sanitizedCategories = ["Scholars & Educators"];
+        }
+
+        console.log("Sanitized categories:", sanitizedCategories);
+
         const newFigure = new Figure({
           name: figureData.name,
           description: figureData.description || "",
           imageUrl: figureData.imageUrl || figureData.image || "",
           years: figureData.years || "",
-          categories: figureData.categories || (figureData.category ? [figureData.category] : ["Scholars & Educators"]),
+          categories: sanitizedCategories,
           tags: figureData.tags || [],
           source: figureData.source || "Wikipedia",
+          sourceUrl: figureData.sourceUrl || "",
           wikipediaId: wikipediaId,
           owners: [userId],
           likes: 0,
           likedBy: [],
+          status: 'pending', // New figures require admin approval
+          submittedBy: userId,
+          // Wikidata metadata for achievements display
+          occupation: figureData.occupation || [],
+          birthPlace: figureData.birthPlace || null,
+          deathPlace: figureData.deathPlace || null,
+          awards: figureData.awards || [],
+          education: figureData.education || [],
+          notableWorks: figureData.notableWorks || [],
+          movement: figureData.movement || [],
         });
+
+        console.log("New figure data:", JSON.stringify(newFigure.toObject(), null, 2));
         return newFigure.save();
       }
     })
@@ -569,15 +613,20 @@ const searchFigures = async (req, res, next) => {
 const ensureFigure = async (req, res, next) => {
   try {
     const figureData = req.body;
-    const wikipediaId = figureData.wikipediaId;
+    const rawWikipediaId = figureData.wikipediaId;
 
     console.log('📥 Ensuring figure in DB:', figureData.name);
 
-    if (!wikipediaId) {
+    if (!rawWikipediaId) {
       return res.status(400).json({ message: 'wikipediaId is required' });
     }
 
-    // Check if figure already exists
+    // Normalize to wiki_ prefix (single source of truth)
+    const wikipediaId = rawWikipediaId.startsWith('wiki_') || rawWikipediaId.startsWith('custom_')
+      ? rawWikipediaId
+      : `wiki_${rawWikipediaId}`;
+
+    // Check if figure already exists (all data uses wiki_ prefix)
     let figure = await Figure.findOne({ wikipediaId });
 
     if (figure) {
@@ -601,13 +650,20 @@ const ensureFigure = async (req, res, next) => {
       likes: 0,
       likedBy: [],
       status: 'pending', // Requires admin approval
+      // Wikidata metadata for achievements display
+      birthPlace: figureData.birthPlace || null,
+      deathPlace: figureData.deathPlace || null,
+      awards: figureData.awards || [],
+      education: figureData.education || [],
+      notableWorks: figureData.notableWorks || [],
+      movement: figureData.movement || [],
     });
 
     await figure.save();
     console.log('✅ Created new figure in DB:', figure.name, figure._id);
 
     // Clear cache so new figure appears
-    cacheService.invalidatePattern('figures');
+    cacheService.deletePattern('figures');
 
     res.status(201).json(figure);
   } catch (error) {
@@ -666,7 +722,7 @@ const approveFigure = async (req, res, next) => {
     }
 
     // Clear cache so figure appears in listings
-    cacheService.invalidatePattern('figures');
+    cacheService.deletePattern('figures');
 
     console.log(`✅ Admin ${req.user.email} approved: ${figure.name}`);
     res.status(200).json(figure);
@@ -729,7 +785,7 @@ const bulkApproveFigures = async (req, res, next) => {
     );
 
     // Clear cache
-    cacheService.invalidatePattern('figures');
+    cacheService.deletePattern('figures');
 
     console.log(`✅ Admin ${req.user.email} bulk approved ${result.modifiedCount} figures`);
     res.status(200).json({

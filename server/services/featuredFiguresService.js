@@ -192,6 +192,7 @@ class FeaturedFiguresService {
   /**
    * Smart get: Returns in-memory cached featured figures, refreshes if needed
    * PERFORMANCE: Checks in-memory cache first (sub-millisecond), then DB cache
+   * IMPORTANT: Never blocks on needsRefresh() - that check happens in background
    */
   static async getOrRefreshFeatured() {
     try {
@@ -201,15 +202,22 @@ class FeaturedFiguresService {
         return cachedFeatured;
       }
 
-      // Check if DB data needs refresh (>24h old)
-      const needsUpdate = await this.needsRefresh();
+      // PERFORMANCE FIX: Get featured data from DB immediately (fast indexed query)
+      // Don't block on needsRefresh() check - that was causing the slowdown
+      const featured = await this.getFeatured();
 
-      if (needsUpdate) {
-        console.log('🔄 Featured figures are stale (>24h), refreshing...');
-        return await this.updateDailyFeatured();
-      }
+      // BACKGROUND: Check if data is stale and needs update (non-blocking)
+      // This runs after returning data so users get instant response
+      this.needsRefresh().then(needsUpdate => {
+        if (needsUpdate) {
+          console.log('🔄 Featured figures are stale (>24h), triggering background refresh...');
+          this.updateDailyFeatured().catch(err =>
+            console.error('Background refresh failed:', err.message)
+          );
+        }
+      }).catch(() => {/* ignore background check errors */ });
 
-      return await this.getFeatured();
+      return featured;
     } catch (error) {
       console.error('❌ Error in getOrRefreshFeatured:', error);
       // Fallback: just get current featured figures

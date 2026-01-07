@@ -1,9 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-const BASE_URL = process.env.NODE_ENV === 'production'
-  ? 'https://diasporaecho-api.onrender.com/api'
-  : 'http://localhost:3001/api';
+import { BASE_URL } from '../../utils/constants';
 
 function AdminModerationPage() {
   const navigate = useNavigate();
