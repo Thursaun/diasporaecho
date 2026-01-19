@@ -73,14 +73,29 @@ const OptimizedImage = ({
 
 function FigureSlider({ onSaveFigureClick, onLikeFigureClick }) {
   const navigate = useNavigate();
-  const [figures, setFigures] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  // PERFORMANCE: Initialize from localStorage for instant render (matches Main.jsx pattern)
+  const [figures, setFigures] = useState(() => {
+    try {
+      const cached = localStorage.getItem('diaspora_featured');
+      if (cached) {
+        console.log('⚡ FigureSlider: Initializing from localStorage cache');
+        return JSON.parse(cached);
+      }
+    } catch (e) { /* ignore parse errors */ }
+    return [];
+  });
+  // Only show loading if no cached data exists
+  const [isLoading, setIsLoading] = useState(() => !localStorage.getItem('diaspora_featured'));
   const [error, setError] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // PERFORMANCE: Preload hero image on mount
+  // PERFORMANCE: Fetch and update figures (background refresh if cached)
   useEffect(() => {
-    setIsLoading(true);
+    // Only show loading if we don't have cached data
+    if (figures.length === 0) {
+      setIsLoading(true);
+    }
     setError(null);
 
     getFeaturedFigures("", 5)
@@ -97,13 +112,22 @@ function FigureSlider({ onSaveFigureClick, onLikeFigureClick }) {
             preloadLink.href = heroUrl;
             document.head.appendChild(preloadLink);
           }
-        } else {
+          
+          // Update localStorage cache
+          try {
+            localStorage.setItem('diaspora_featured', JSON.stringify(data));
+          } catch (e) { /* ignore storage errors */ }
+        } else if (figures.length === 0) {
+          // Only set error if we don't have cached data to show
           setError("No featured echoes found.");
         }
       })
       .catch((err) => {
         console.error("Error fetching featured echoes:", err);
-        setError("Failed to load featured echoes. Please try again.");
+        // Only set error if we don't have cached data to show
+        if (figures.length === 0) {
+          setError("Failed to load featured echoes. Please try again.");
+        }
       })
       .finally(() => setIsLoading(false));
   }, []);

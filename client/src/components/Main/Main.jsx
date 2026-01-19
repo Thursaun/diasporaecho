@@ -148,6 +148,11 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
         console.log('✅ Featured figures loaded:', figures.length);
         setFeaturedFigures(figures);
         setFeaturedLoading(false);
+        
+        // CACHE: Update localStorage with fresh data (includes metadata)
+        try {
+          localStorage.setItem('diaspora_featured', JSON.stringify(figures));
+        } catch (e) { /* ignore storage errors */ }
 
         // PERFORMANCE: Preload featured images for instant display
         figures.slice(0, 3).forEach((figure, index) => {
