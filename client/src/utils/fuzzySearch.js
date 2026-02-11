@@ -97,6 +97,82 @@ const calculateSimilarity = (query, text) => {
 };
 
 /**
+ * Calculate relevance score for a figure against a query, with field-level weighting.
+ * Name matches are weighted much higher than description matches for precision.
+ * @param {string} query - Search query
+ * @param {object} figure - Figure object
+ * @returns {number} - Weighted relevance score (0-200+)
+ */
+const calculateFigureRelevance = (figure, query) => {
+  const queryLower = query.toLowerCase().trim();
+  const nameLower = (figure.name || '').toLowerCase();
+
+  let score = 0;
+
+  // === NAME MATCHING (highest weight) ===
+  if (nameLower === queryLower) {
+    score += 200; // Exact name match
+  } else if (nameLower.startsWith(queryLower)) {
+    score += 150; // Name starts with query
+  } else if (nameLower.includes(queryLower)) {
+    score += 100; // Name contains exact query
+  } else {
+    // Word-level matching in name
+    const queryWords = queryLower.split(/\s+/).filter(w => w.length >= 2);
+    const nameWords = nameLower.split(/\s+/);
+    let nameWordScore = 0;
+
+    queryWords.forEach(qw => {
+      if (nameWords.some(nw => nw === qw)) {
+        nameWordScore += 40; // Exact word in name
+      } else if (nameWords.some(nw => nw.startsWith(qw))) {
+        nameWordScore += 30; // Word prefix match in name
+      } else {
+        // Typo tolerance for name only
+        nameWords.forEach(nw => {
+          if (nw.length >= qw.length - 1) {
+            const distance = levenshteinDistance(qw, nw);
+            const maxLen = Math.max(qw.length, nw.length);
+            const similarity = 1 - (distance / maxLen);
+            if (similarity >= 0.8) {
+              nameWordScore += Math.floor(similarity * 25);
+            }
+          }
+        });
+      }
+    });
+    score += nameWordScore;
+  }
+
+  // === OCCUPATION / CATEGORY MATCHING (medium weight) ===
+  const occupations = (figure.occupation || []).join(' ').toLowerCase();
+  const categories = (figure.categories || []).join(' ').toLowerCase();
+  const category = (figure.category || '').toLowerCase();
+  const metaText = `${occupations} ${categories} ${category}`;
+
+  if (metaText.includes(queryLower)) {
+    score += 30;
+  }
+
+  // === TAG MATCHING (medium weight) ===
+  const tags = (figure.tags || []).map(t => t.toLowerCase());
+  if (tags.some(tag => tag.includes(queryLower))) {
+    score += 25;
+  }
+
+  // === DESCRIPTION MATCHING (low weight — prevents noise) ===
+  const descLower = (figure.description || '').toLowerCase();
+  // Only boost if the exact query phrase appears in the first 200 chars (intro)
+  if (descLower.substring(0, 200).includes(queryLower)) {
+    score += 15;
+  } else if (descLower.includes(queryLower)) {
+    score += 5;
+  }
+
+  return score;
+};
+
+/**
  * Common synonyms for historical figure attributes
  */
 const SYNONYMS = {
@@ -152,34 +228,24 @@ export const fuzzySearchFilter = (figures, query) => {
 
   const queryVariations = expandQueryWithSynonyms(query);
 
-  // Score each figure based on relevance
+  // Score each figure using field-weighted relevance
   const scoredFigures = figures.map(figure => {
     let maxScore = 0;
 
-    // Search across all text fields
-    const searchableText = [
-      figure.name || '',
-      figure.description || '',
-      ...(figure.tags || []),
-      figure.category || '',
-      figure.years || '',
-    ].join(' ');
-
-    // Calculate score for each query variation and keep the highest
+    // Try each query variation (original + synonyms) and keep highest
     queryVariations.forEach(queryVar => {
-      const score = calculateSimilarity(queryVar, searchableText);
+      const score = calculateFigureRelevance(figure, queryVar);
       maxScore = Math.max(maxScore, score);
     });
 
-    return {
-      figure,
-      score: maxScore,
-    };
+    return { figure, score: maxScore };
   });
 
-  // Filter figures with score > 0 and sort by score
+  // Minimum score threshold to filter out noise
+  const MIN_SCORE = 5;
+
   return scoredFigures
-    .filter(item => item.score > 0)
+    .filter(item => item.score >= MIN_SCORE)
     .sort((a, b) => b.score - a.score)
     .map(item => item.figure);
 };

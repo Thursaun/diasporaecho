@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getFigures } from '../../utils/api';
+import { fuzzySearchFilter } from '../../utils/fuzzySearch';
 import LazyFigureCard from './LazyFigureCard';
 
 // =============================================================================
@@ -166,20 +167,12 @@ function Echoes({
   const currentFigures = useMemo(() => {
     const categoryFigures = categorizedFigures[activeCategory] || [];
     
-    // Filter by search query if provided
+    // Use fuzzy search for precise, ranked filtering
     const filtered = searchQuery.trim()
-      ? categoryFigures.filter(fig => {
-          const query = searchQuery.toLowerCase();
-          return (
-            fig.name?.toLowerCase().includes(query) ||
-            fig.description?.toLowerCase().includes(query) ||
-            fig.tags?.some(tag => tag.toLowerCase().includes(query))
-          );
-        })
+      ? fuzzySearchFilter(categoryFigures, searchQuery)
       : categoryFigures;
     
     const sliced = filtered.slice(0, displayCount);
-    console.log(`📊 Displaying ${sliced.length} of ${filtered.length} figures (category: ${activeCategory}, search: "${searchQuery}")`);
     return sliced;
   }, [categorizedFigures, activeCategory, displayCount, searchQuery]);
 
@@ -187,14 +180,7 @@ function Echoes({
   const hasMoreFigures = useMemo(() => {
     const categoryFigures = categorizedFigures[activeCategory] || [];
     const filtered = searchQuery.trim()
-      ? categoryFigures.filter(fig => {
-          const query = searchQuery.toLowerCase();
-          return (
-            fig.name?.toLowerCase().includes(query) ||
-            fig.description?.toLowerCase().includes(query) ||
-            fig.tags?.some(tag => tag.toLowerCase().includes(query))
-          );
-        })
+      ? fuzzySearchFilter(categoryFigures, searchQuery)
       : categoryFigures;
     return displayCount < filtered.length;
   }, [categorizedFigures, activeCategory, displayCount, searchQuery]);
