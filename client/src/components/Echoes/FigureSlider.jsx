@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { getFeaturedFigures } from "../../utils/api";
 import { getOptimizedImageUrl } from "../../utils/imageUtils";
@@ -90,6 +90,9 @@ function FigureSlider({ onSaveFigureClick, onLikeFigureClick }) {
   const [error, setError] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  // PERFORMANCE: Ref to track preload links for cleanup
+  const preloadLinkRef = useRef(null);
+
   // PERFORMANCE: Fetch and update figures (background refresh if cached)
   useEffect(() => {
     // Only show loading if we don't have cached data
@@ -105,12 +108,17 @@ function FigureSlider({ onSaveFigureClick, onLikeFigureClick }) {
           
           // PERFORMANCE: Preload the first hero image immediately
           if (data[0]?.imageUrl) {
+            // Clean up previous preload link if it exists
+            if (preloadLinkRef.current) {
+              preloadLinkRef.current.remove();
+            }
             const heroUrl = getOptimizedImageUrl(data[0].imageUrl, 800);
             const preloadLink = document.createElement('link');
             preloadLink.rel = 'preload';
             preloadLink.as = 'image';
             preloadLink.href = heroUrl;
             document.head.appendChild(preloadLink);
+            preloadLinkRef.current = preloadLink;
           }
           
           // Update localStorage cache
@@ -130,6 +138,14 @@ function FigureSlider({ onSaveFigureClick, onLikeFigureClick }) {
         }
       })
       .finally(() => setIsLoading(false));
+
+    // Cleanup preload link on unmount
+    return () => {
+      if (preloadLinkRef.current) {
+        preloadLinkRef.current.remove();
+        preloadLinkRef.current = null;
+      }
+    };
   }, []);
 
   const goToPrevious = useCallback(() => {

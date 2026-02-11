@@ -78,6 +78,27 @@ const performanceTracker = {
   }
 };
 
+/**
+ * Higher-order function to wrap async API calls with performance tracking.
+ * Eliminates repetitive performanceTracker.start/end boilerplate.
+ * @param {string} label - Performance label
+ * @param {Function} fn - Async function to wrap
+ * @returns {Function} - Wrapped function with automatic perf tracking
+ */
+const withPerfTracking = (label, fn) => {
+  return async (...args) => {
+    performanceTracker.start(label);
+    try {
+      const result = await fn(...args);
+      performanceTracker.end(label);
+      return result;
+    } catch (error) {
+      performanceTracker.end(label);
+      throw error;
+    }
+  };
+};
+
 // =============================================================================
 // PERFORMANCE IMPROVEMENT: Cached Fetch Function with Request Deduplication
 // =============================================================================
@@ -466,21 +487,10 @@ const searchFigures = async (params = {}) => {
  * - Caches individual figure data
  * - Faster subsequent loads of same figure
  */
-const getFigureById = async (id) => {
-  try {
-    performanceTracker.start('getFigureById');
-
-    const data = await fetchWithTimeout(`${BASE_URL}/figures/${id}`);
-
-    performanceTracker.end('getFigureById');
-    return data;
-
-  } catch (error) {
-    performanceTracker.end('getFigureById');
-    console.error("❌ Error fetching figure by ID:", error);
-    throw error;
-  }
-};
+const getFigureById = withPerfTracking('getFigureById', async (id) => {
+  const data = await fetchWithTimeout(`${BASE_URL}/figures/${id}`);
+  return data;
+});
 
 /**
  * Get figure by Wikipedia ID with caching
@@ -628,19 +638,14 @@ const likeFigure = async (id) => {
  */
 const getSavedFigures = async () => {
   try {
-    performanceTracker.start('getSavedFigures');
-
-    const data = await fetchWithTimeout(`${BASE_URL}/users/me/saved`, {
-      headers: getHeaders(),
-    });
-
-    performanceTracker.end('getSavedFigures');
+    const data = await withPerfTracking('getSavedFigures', async () => {
+      return await fetchWithTimeout(`${BASE_URL}/users/me/saved`, {
+        headers: getHeaders(),
+      });
+    })();
     return Array.isArray(data) ? data : [];
-
   } catch (error) {
-    performanceTracker.end('getSavedFigures');
     console.error("❌ Error fetching saved figures:", error);
-
     // PERFORMANCE: Return empty array instead of throwing for better UX
     return [];
   }
@@ -756,34 +761,23 @@ const ensureFigureInDB = async (figure) => {
  * - Quick DELETE operation
  * - Cache invalidation for immediate UI update
  */
-const unsaveFigure = async (figureId) => {
-  try {
-    performanceTracker.start('unsaveFigure');
+const unsaveFigure = withPerfTracking('unsaveFigure', async (figureId) => {
+  const response = await fetch(`${BASE_URL}/figures/unsave/${figureId}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  });
 
-    const response = await fetch(`${BASE_URL}/figures/unsave/${figureId}`, {
-      method: "DELETE",
-      headers: getHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    performanceTracker.end('unsaveFigure');
-
-    // PERFORMANCE: Clear cache after unsave operation
-    clearCacheByPattern('/saved');
-
-    return data;
-
-  } catch (error) {
-    performanceTracker.end('unsaveFigure');
-    console.error("❌ Error unsaving figure:", error);
-    throw error;
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
   }
-};
+
+  const data = await response.json();
+
+  // PERFORMANCE: Clear cache after unsave operation
+  clearCacheByPattern('/saved');
+
+  return data;
+});
 
 // =============================================================================
 // PERFORMANCE IMPROVEMENT: Category Matching Optimization

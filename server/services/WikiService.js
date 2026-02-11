@@ -1076,54 +1076,6 @@ function extractYearsFromText(text) {
   return null;
 }
 
-function formatWikipediaData(data, searchTerm, peopleOnly = false) {
-  if (!data || !data.query || !data.query.pages) {
-    return [];
-  }
-
-  const pages = data.query.pages;
-  const figures = [];
-
-  for (const pageId in pages) {
-    const page = pages[pageId];
-
-    if (!page.extract) {
-      continue;
-    }
-
-    if (peopleOnly && !looksLikePerson(page)) {
-      continue;
-    }
-
-    // Use the improved year extraction
-    const extractedYears = extractYearsFromText(page.extract);
-    const years = extractedYears || "Unknown";
-
-    const tags = extractTags(page);
-    const contributions = extractContributions(page.extract);
-
-    figures.push({
-      _id: pageId,
-      wikipediaId: pageId,
-      name: page.title,
-      imageUrl: page.original?.source || page.thumbnail?.source ||
-        "https://via.placeholder.com/300x400?text=No+Image",
-      description: page.extract || "No description available",
-      years: years,
-      tags: tags,
-      contributions: contributions,
-      source: "Wikipedia",
-      sourceUrl: page.fullurl || `https://en.wikipedia.org/?curid=${pageId}`,
-      likes: 0,
-      likedBy: [],
-      // Default categories (this path doesn't have Wikidata occupation data)
-      categories: ["Scholars & Educators"],
-    });
-  }
-
-  console.log(`Formatted ${figures.length} figures with improved year extraction`);
-  return figures;
-}
 
 function extractTags(page) {
   const tags = [];

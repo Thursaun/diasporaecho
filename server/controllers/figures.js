@@ -22,8 +22,8 @@ const getFigures = async (req, res, next) => {
       return res.status(200).json(cached);
     }
 
-    // Fetch from database
-    const figures = await Figure.find({})
+    // Fetch from database - only approved figures shown publicly
+    const figures = await Figure.find({ status: { $in: ['approved', undefined] } })
       .select("-owners")
       .sort({ createdAt: -1 })
       .lean() // PERFORMANCE: Return plain objects

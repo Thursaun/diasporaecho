@@ -108,21 +108,19 @@ const App = () => {
     }
   }, []);
 
-  const fetchSavedFigures = () => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    console.log("Fetching saved figures...");
-    getSavedFigures() 
-      .then((data) => {
-        console.log("✅ Fetched saved figures:", data);
-        setSavedFigures(data);
-      })
-      .catch((err) => {
-        console.error("❌ Error fetching saved figures:", err);
-        setSavedFigures([]); 
-      });
-  }
-};
+  const fetchSavedFigures = useCallback(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      getSavedFigures() 
+        .then((data) => {
+          setSavedFigures(data);
+        })
+        .catch((err) => {
+          console.error("Error fetching saved figures:", err);
+          setSavedFigures([]); 
+        });
+    }
+  }, []);
 
   const openModal = (modal) => {
     setActiveModal(modal);
@@ -235,14 +233,12 @@ const App = () => {
     // Use unsaveFigure - this only removes user association
     unsaveFigure(figureToUnsave)
       .then(() => {
-        console.log("✅ Figure unsaved successfully");
+        console.log("Figure unsaved successfully");
         setSavedFigures((prevSavedFigures) =>
           prevSavedFigures.filter(
             (savedFigure) => getFigureId(savedFigure) !== figureToUnsave
           )
         );
-        // Refresh saved figures to update Profile
-        fetchSavedFigures();
       })
       .catch((err) => {
         console.error("❌ Error unsaving figure:", err);

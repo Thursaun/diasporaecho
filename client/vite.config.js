@@ -10,6 +10,11 @@ export default defineConfig({
     viteCompression({
       algorithm: 'gzip',
       threshold: 1024, // Only compress files > 1KB
+    }),
+    viteCompression({
+      algorithm: 'brotliCompress',
+      ext: '.br',
+      threshold: 1024,
     })
   ],
   base: '/diasporaecho/',
