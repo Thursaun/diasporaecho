@@ -1,5 +1,5 @@
 require("dotenv").config();
-const fetch = require("node-fetch");
+// Native fetch is available in Node 18+ (using v23.5)
 const Figure = require("../models/figure");
 const checkDupes = require("../helper/checkDupes");
 const { cacheService, CACHE_TTL } = require("./cacheService");

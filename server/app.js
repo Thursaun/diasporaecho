@@ -16,8 +16,25 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-app.use(compression()); // Use compression
+// PERFORMANCE: Optimized compression — level 6 is the sweet spot for CPU vs size
+app.use(compression({
+  level: 6,
+  threshold: 1024, // Only compress responses > 1KB
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) return false;
+    return compression.filter(req, res);
+  },
+}));
 app.use(helmet());
+
+// PERFORMANCE: Keep-alive headers to reuse TCP connections
+app.use((req, res, next) => {
+  res.set({
+    'Connection': 'keep-alive',
+    'Keep-Alive': 'timeout=30, max=100',
+  });
+  next();
+});
 
 // CORS configuration
 const allowedOrigins = [
@@ -49,7 +66,12 @@ app.use(requestLogger);
 app.use(limiter);
 app.use('/api', routes);
 
-mongoose.connect(MONGODB_URL)
+// PERFORMANCE: MongoDB connection with optimized pooling
+mongoose.connect(MONGODB_URL, {
+  maxPoolSize: 10,       // Handle concurrent requests without waiting
+  socketTimeoutMS: 30000, // 30s socket timeout
+  serverSelectionTimeoutMS: 5000, // Fail fast if server unreachable
+})
   .then(() => {
     console.log('Connected to MongoDB Atlas');
     console.log('Database:', mongoose.connection.name);

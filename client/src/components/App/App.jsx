@@ -13,6 +13,16 @@ const FigureDetail = lazy(() => import("../Echoes/FigureDetail"));
 const AboutUs = lazy(() => import("../About/About"));
 const AdminModerationPage = lazy(() => import("../Admin/AdminModerationPage"));
 
+// PERFORMANCE: Prefetch common routes after initial render for instant navigation
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      import("../Echoes/Echoes");
+      import("../About/About");
+    }, 2000); // 2s delay so it doesn't compete with initial page load
+  }, { once: true });
+}
+
 import CurrentUserContext from "../../contexts/CurrentUserContext";
 import { checkToken, login, register } from "../../utils/auth";
 import {

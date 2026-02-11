@@ -20,6 +20,7 @@ export default defineConfig({
   base: '/diasporaecho/',
   build: {
     target: 'es2020', // Modern browsers for smaller bundles
+    assetsInlineLimit: 4096, // Inline assets < 4KB as data URLs (saves HTTP roundtrips)
     minify: 'terser',
     terserOptions: {
       compress: {
