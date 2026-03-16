@@ -6,9 +6,9 @@ const Figure = require('../models/figure');
  * Uses in-memory caching with robust fallbacks.
  *
  * Selection:
- *   Rank 1 (Most Liked)  — highest likes
- *   Rank 2 (Most Popular) — highest views
- *   Rank 3 (Featured)     — highest searchHits
+ *   Rank 1 (Most Liked)  — highest likes count
+ *   Rank 2 (Most Popular) — most saved by users (owners array length)
+ *   Rank 3 (Featured)     — newest figure added to database (createdAt)
  */
 
 // In-memory cache
@@ -39,6 +39,29 @@ class FeaturedFiguresService {
 
     console.log(`📋 Fallback: returning top ${figures.length} approved figures by likes`);
     return figures;
+  }
+
+  /**
+   * Pick the most saved figure (most owners) using aggregation.
+   * Excludes already-picked IDs and pushes result into picks array.
+   */
+  static async pickMostSaved(selectedIds, picks) {
+    const matchStage = {
+      ...APPROVED_FILTER,
+      ...(selectedIds.length > 0 && { _id: { $nin: selectedIds } }),
+    };
+
+    const result = await Figure.aggregate([
+      { $match: matchStage },
+      { $addFields: { ownersCount: { $size: { $ifNull: ['$owners', []] } } } },
+      { $sort: { ownersCount: -1, likes: -1 } },
+      { $limit: 1 },
+    ]);
+
+    if (result.length > 0) {
+      selectedIds.push(result[0]._id);
+      picks.push({ id: result[0]._id, rank: 2, name: result[0].name });
+    }
   }
 
   /**
@@ -73,8 +96,8 @@ class FeaturedFiguresService {
       };
 
       await pickTop({ likes: -1, createdAt: -1 }, 1);       // Most Liked
-      await pickTop({ views: -1, likes: -1 }, 2);            // Most Popular
-      await pickTop({ searchHits: -1, views: -1 }, 3);       // Featured
+      await this.pickMostSaved(selectedIds, picks);           // Most Popular (most saved)
+      await pickTop({ createdAt: -1 }, 3);                    // Featured (newest)
 
       if (picks.length === 0) {
         console.warn('⚠️ No approved figures to feature');
@@ -99,7 +122,7 @@ class FeaturedFiguresService {
       console.log('✅ Featured figures updated:');
       updated.forEach((fig) => {
         const badge = fig.featuredRank === 1 ? '🥇 Most Liked'
-          : fig.featuredRank === 2 ? '🥈 Most Popular' : '🥉 Featured';
+          : fig.featuredRank === 2 ? '🥈 Popular (Most Saved)' : '🥉 Featured (Newest)';
         console.log(`  ${badge}: ${fig.name}`);
       });
 

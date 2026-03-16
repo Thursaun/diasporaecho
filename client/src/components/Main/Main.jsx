@@ -293,7 +293,7 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
             }`}>
               {topFeaturedFigures.map((figure, index) => (
                 <div
-                  key={figure._id}
+                  key={figure._id || figure.wikipediaId}
                   className={`transform transition-all duration-300 ${
                     searchQuery ? '' : 'hover:scale-105'
                   } mx-auto w-full max-w-sm`}

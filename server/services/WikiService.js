@@ -197,8 +197,8 @@ const searchController = async (req, res) => {
 
     // ---- STEP 2: If local results are insufficient, search Wikipedia ----
     let wikiResults = [];
-    if (localResults.length < 5) {
-      console.log(`🌐 Only ${localResults.length} local results, searching Wikipedia...`);
+    if (localResults.length === 0) {
+      console.log(`🌐 No local results, searching Wikipedia as fallback...`);
       try {
         const rawWiki = await withTimeout(searchFiguresWithCache(searchTerm), 8000);
 
@@ -209,7 +209,7 @@ const searchController = async (req, res) => {
             !fig.imageUrl.includes("placeholder") &&
             !localWikiIds.has(fig.wikipediaId)
           )
-          .slice(0, 20 - localResults.length)
+          .slice(0, 20)
           .map(fig => ({ ...fig, _source: 'wikipedia' }));
 
         console.log(`🌐 Wikipedia: found ${wikiResults.length} additional results in ${Date.now() - startTime}ms`);

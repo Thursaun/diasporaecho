@@ -507,8 +507,9 @@ const getFigureByWikipediaId = async (wikipediaId) => {
   try {
     performanceTracker.start('getFigureByWikipediaId');
 
-    // FIX: Strip wiki_ prefix if present since route already adds /wiki/
-    const cleanId = wikipediaId.replace('wiki_', '');
+    // Strip wiki_ prefix if present since the route is /figures/wiki/:id
+    // Also handle cases where the ID might be a raw numeric string
+    const cleanId = wikipediaId.startsWith('wiki_') ? wikipediaId.slice(5) : wikipediaId;
 
     // First try to get from database
     try {

@@ -68,10 +68,13 @@ function FigureDetail({
         setError(null);
 
         const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+        const isWikiId = id.startsWith('wiki_') || /^\d+$/.test(id);
 
         const fetchPromise = isObjectId
           ? getFigureById(id)
           : getFigureByWikipediaId(id);
+
+        console.log(`🔍 FigureDetail fetching: id="${id}", isObjectId=${isObjectId}, isWikiId=${isWikiId}`);
 
         fetchPromise
             .then(figureData => {
@@ -205,9 +208,9 @@ function FigureDetail({
     }
 
     const {
-        name,
-        imageUrl,
-        description,
+        name = 'Unknown Figure',
+        imageUrl = '',
+        description = '',
         years,
         tags = [],
         contributions = [],
@@ -225,7 +228,7 @@ function FigureDetail({
 
     console.log("Rendering FigureDetail with likes:", likes, typeof likes);
 
-    const paragraphs = description.split(/\n+/).filter(p => p.trim());
+    const paragraphs = (description || '').split(/\n+/).filter(p => p.trim());
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
