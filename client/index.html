@@ -38,6 +38,22 @@
         to { transform: rotate(360deg); }
       }
     </style>
+    <!-- PERFORMANCE: Prefetch featured figures API BEFORE React loads.
+         This runs in parallel with JS bundle download, eliminating the waterfall:
+         Before: HTML → JS → React → Main → useEffect → fetch (sequential)
+         After:  HTML → fetch + JS → React uses prefetched data (parallel) -->
+    <script>
+      (function() {
+        var API = window.location.hostname === 'localhost'
+          ? 'http://localhost:3000/api'
+          : 'https://diasporaecho.onrender.com/api';
+        // Start fetching featured figures immediately
+        window.__prefetchedFeatured = fetch(API + '/figures/featured', {
+          headers: { 'Accept': 'application/json' }
+        }).then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
+          .catch(function() { return null; });
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

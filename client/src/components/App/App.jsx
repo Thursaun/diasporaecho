@@ -6,7 +6,9 @@ import Register from "../ModalWithForms/Register";
 import Loading from "../Loading/Loading";
 import Toast from "../Toast/Toast";
 
-const Main = lazy(() => import("../Main/Main"));
+// PERFORMANCE: Main is the homepage — load eagerly, not lazily.
+// Lazy-loading the landing page adds an extra chunk request to the critical path.
+import Main from "../Main/Main";
 const Echoes = lazy(() => import("../Echoes/Echoes"));
 const Profile = lazy(() => import("../ProtectedRoute/Profile"));
 const FigureDetail = lazy(() => import("../Echoes/FigureDetail"));

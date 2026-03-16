@@ -62,11 +62,21 @@ app.options('*', cors({
 
 app.use(express.json());
 
+// PERFORMANCE: Lightweight health endpoint — no DB, no auth, no rate limit.
+// Responds instantly even during cold start (before MongoDB connects).
+// Clients can ping this to wake Render without blocking on DB queries.
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: Date.now() });
+});
+
 app.use(requestLogger);
 app.use(limiter);
 app.use('/api', routes);
 
 // PERFORMANCE: MongoDB connection with optimized pooling
+// PERFORMANCE: Import featured figures service to warm cache on startup
+const FeaturedFiguresService = require('./services/featuredFiguresService');
+
 mongoose.connect(MONGODB_URL, {
   maxPoolSize: 10,       // Handle concurrent requests without waiting
   socketTimeoutMS: 30000, // 30s socket timeout
@@ -75,6 +85,17 @@ mongoose.connect(MONGODB_URL, {
   .then(() => {
     console.log('Connected to MongoDB Atlas');
     console.log('Database:', mongoose.connection.name);
+
+    // PERFORMANCE: Pre-warm the featured figures cache on startup.
+    // First request after cold start would otherwise trigger multiple DB queries.
+    // By warming here, /api/figures/featured responds from memory instantly.
+    FeaturedFiguresService.getOrRefreshFeatured()
+      .then((figures) => {
+        console.log(`🔥 Warmed featured figures cache: ${figures.length} figures ready`);
+      })
+      .catch((err) => {
+        console.warn('⚠️ Failed to warm featured cache (non-critical):', err.message);
+      });
   })
   .catch(err => {
     console.error('MongoDB connection error:', err);

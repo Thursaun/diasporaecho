@@ -266,8 +266,24 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
           </div>
 
           {featuredLoading ? (
-            <div className="flex justify-center items-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-secondary"></div>
+            <div className={`grid ${
+              searchQuery
+                ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4'
+                : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8'
+            }`}>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="mx-auto w-full max-w-sm animate-pulse">
+                  <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div className="bg-gray-200 h-48 w-full" />
+                    <div className="p-4 space-y-3">
+                      <div className="bg-gray-200 h-5 w-3/4 rounded" />
+                      <div className="bg-gray-200 h-4 w-1/2 rounded" />
+                      <div className="bg-gray-200 h-3 w-full rounded" />
+                      <div className="bg-gray-200 h-3 w-5/6 rounded" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <div className={`grid transition-all duration-500 ${

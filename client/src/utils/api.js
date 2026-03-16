@@ -355,37 +355,43 @@ const getFeaturedFigures = async () => {
     const cachedTimestamp = parseInt(localStorage.getItem(STORAGE_TIMESTAMP_KEY) || '0');
     const isStale = Date.now() - cachedTimestamp > STALE_THRESHOLD;
 
-    if (cachedData) {
+    if (cachedData && !isStale) {
       const figures = JSON.parse(cachedData);
-      console.log(`⚡ Loaded ${figures.length} featured figures from localStorage (${isStale ? 'stale' : 'fresh'})`);
-
-      // If stale, refresh in background
-      if (isStale) {
-        console.log('🔄 Refreshing featured figures in background...');
-        fetchWithTimeout(`${BASE_URL}/figures/featured`, {}, 30000, 2, 'FEATURED')
-          .then(freshData => {
-            if (Array.isArray(freshData) && freshData.length > 0) {
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(freshData));
-              localStorage.setItem(STORAGE_TIMESTAMP_KEY, Date.now().toString());
-              console.log(`✅ Background refresh: ${freshData.length} featured figures cached`);
-            }
-          })
-          .catch(err => console.warn('Featured background refresh failed:', err.message));
-      }
-
+      console.log(`⚡ Loaded ${figures.length} featured figures from fresh localStorage`);
       performanceTracker.end('getFeaturedFigures');
       return figures;
     }
 
-    // No cache - fetch from network
-    console.log('🌐 No cached featured figures, fetching...');
-    const data = await fetchWithTimeout(
-      `${BASE_URL}/figures/featured`,
-      {},
-      30000,
-      2,
-      'FEATURED'
-    );
+    // PERFORMANCE: Use prefetched data from index.html (started before React loaded)
+    // This eliminates the waterfall: HTML→JS→React→useEffect→fetch
+    let data = null;
+    if (window.__prefetchedFeatured) {
+      console.log('🚀 Using prefetched featured figures (started in index.html)');
+      data = await window.__prefetchedFeatured;
+      window.__prefetchedFeatured = null; // Consume once
+    }
+
+    // If prefetch failed or was already consumed, fetch normally with shorter timeout
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      if (cachedData) {
+        // Return stale cache immediately, refresh in background
+        const figures = JSON.parse(cachedData);
+        console.log(`⚡ Returning stale localStorage cache (${figures.length} figures), refreshing in background`);
+        fetchWithTimeout(`${BASE_URL}/figures/featured`, {}, 10000, 1, 'FEATURED')
+          .then(freshData => {
+            if (Array.isArray(freshData) && freshData.length > 0) {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(freshData));
+              localStorage.setItem(STORAGE_TIMESTAMP_KEY, Date.now().toString());
+            }
+          })
+          .catch(() => {});
+        performanceTracker.end('getFeaturedFigures');
+        return figures;
+      }
+
+      console.log('🌐 No cache, fetching featured figures from network...');
+      data = await fetchWithTimeout(`${BASE_URL}/figures/featured`, {}, 10000, 1, 'FEATURED');
+    }
 
     // Cache to localStorage
     if (Array.isArray(data) && data.length > 0) {
