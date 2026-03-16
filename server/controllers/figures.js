@@ -23,7 +23,10 @@ const getFigures = async (req, res, next) => {
     }
 
     // Fetch from database - only approved figures shown publicly
-    const figures = await Figure.find({ status: { $in: ['approved', undefined] } })
+    // FIX: Use $nin instead of $in with undefined. In MongoDB/Mongoose, undefined
+    // gets stripped from $in arrays, so figures with null/missing status were excluded.
+    // $nin: ['pending', 'rejected'] matches 'approved', null, and missing fields.
+    const figures = await Figure.find({ status: { $nin: ['pending', 'rejected'] } })
       .select("-owners")
       .sort({ createdAt: -1 })
       .lean() // PERFORMANCE: Return plain objects
@@ -435,23 +438,39 @@ const unsaveFigure = (req, res, next) => {
     });
 };
 
-// PERFORMANCE: Optimized featured figures using daily caching
+// PERFORMANCE: Optimized featured figures with robust fallback chain
 const getFeaturedFigures = async (req, res, next) => {
   try {
-    // Smart get: Returns cached featured figures or refreshes if >24h old
-    const featuredFigures = await FeaturedFiguresService.getOrRefreshFeatured();
+    let featuredFigures = await FeaturedFiguresService.getOrRefreshFeatured();
 
-    // PERFORMANCE: Add HTTP cache headers for browser caching (24 hours)
+    // Ultimate fallback: if service returned nothing, query DB directly
+    if (!featuredFigures || featuredFigures.length === 0) {
+      console.warn('⚠️ Featured service returned empty, falling back to direct query');
+      featuredFigures = await Figure.find({ status: { $nin: ['pending', 'rejected'] } })
+        .sort({ likes: -1, views: -1, createdAt: -1 })
+        .limit(3)
+        .lean()
+        .exec();
+    }
+
     res.set({
-      'Cache-Control': 'public, max-age=86400, stale-while-revalidate=3600', // 24h cache, 1h stale
-      'ETag': `"featured-${featuredFigures[0]?.featuredSince || Date.now()}"`,
+      'Cache-Control': 'public, max-age=3600, stale-while-revalidate=600',
       'Vary': 'Accept-Encoding'
     });
 
     res.status(200).json(featuredFigures);
   } catch (error) {
     console.error('Error getting featured figures:', error);
-    next(error);
+    // Even on error, try to return something rather than a 500
+    try {
+      const fallback = await Figure.find({ status: { $nin: ['pending', 'rejected'] } })
+        .sort({ likes: -1 })
+        .limit(3)
+        .lean();
+      return res.status(200).json(fallback);
+    } catch {
+      next(error);
+    }
   }
 };
 

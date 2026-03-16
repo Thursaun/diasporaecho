@@ -2,229 +2,192 @@ const Figure = require('../models/figure');
 
 /**
  * Daily Featured Figures Service
- * Automatically selects and updates the top 3 figures based on likes
- * Runs daily to keep featured content fresh
- * 
- * PERFORMANCE: Uses in-memory caching to minimize DB queries
+ * Selects top 3 approved figures based on engagement metrics.
+ * Uses in-memory caching with robust fallbacks.
+ *
+ * Selection:
+ *   Rank 1 (Most Liked)  — highest likes
+ *   Rank 2 (Most Popular) — highest views
+ *   Rank 3 (Featured)     — highest searchHits
  */
 
-// In-memory cache for server-side optimization
+// In-memory cache
 let cachedFeatured = null;
 let cacheTimestamp = null;
-const CACHE_TTL = 60 * 60 * 1000; // 1 hour in-memory cache
+const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+// Only approved (or legacy unset-status) figures can be featured
+const APPROVED_FILTER = { status: { $nin: ['pending', 'rejected'] } };
 
 class FeaturedFiguresService {
-  /**
-   * Clear the in-memory cache (call after updates)
-   */
   static clearCache() {
     cachedFeatured = null;
     cacheTimestamp = null;
-    console.log('🗑️ Featured figures cache cleared');
   }
 
   /**
-   * Update featured figures based on distinct metrics:
-   * Rank 1 (🥇 Most Liked): Highest likes
-   * Rank 2 (🥈 Most Popular): Highest views
-   * Rank 3 (🥉 Featured): Highest searchHits
+   * Quick fallback: return the top 3 approved figures by likes.
+   * No isFeatured flags needed — just a simple sorted query.
+   * Used when the flagging system has no results.
+   */
+  static async getTopApprovedFigures() {
+    const figures = await Figure.find(APPROVED_FILTER)
+      .sort({ likes: -1, views: -1, createdAt: -1 })
+      .limit(3)
+      .lean()
+      .exec();
+
+    console.log(`📋 Fallback: returning top ${figures.length} approved figures by likes`);
+    return figures;
+  }
+
+  /**
+   * Select and flag the daily featured figures.
+   * Only considers approved figures.
    */
   static async updateDailyFeatured() {
     try {
-      console.log('🔄 Starting daily featured figures update...');
+      console.log('🔄 Updating daily featured figures...');
 
-      // STEP 1: Clear all current featured status
+      // Clear previous flags
       await Figure.updateMany(
         { isFeatured: true },
-        {
-          $set: {
-            isFeatured: false,
-            featuredRank: null
-          }
-        }
+        { $set: { isFeatured: false, featuredRank: null } }
       );
-      console.log('✅ Cleared previous featured figures');
 
-      const selectedIds = new Set();
-      const featuredFigures = [];
+      const selectedIds = [];
+      const picks = [];
 
-      // --- SELECTION 1: MOST LIKED (🥇) ---
-      const mostLiked = await Figure.findOne({ _id: { $nin: Array.from(selectedIds) } })
-        .sort({ likes: -1, createdAt: -1 })
-        .exec();
+      // Helper: find the top approved figure by a sort, excluding already-picked IDs
+      const pickTop = async (sort, rank) => {
+        const filter = {
+          ...APPROVED_FILTER,
+          ...(selectedIds.length > 0 && { _id: { $nin: selectedIds } }),
+        };
+        const fig = await Figure.findOne(filter).sort(sort).lean().exec();
+        if (fig) {
+          selectedIds.push(fig._id);
+          picks.push({ id: fig._id, rank, name: fig.name });
+        }
+        return fig;
+      };
 
-      if (mostLiked) {
-        selectedIds.add(mostLiked._id.toString());
-        featuredFigures.push({ figure: mostLiked, rank: 1 });
-      }
+      await pickTop({ likes: -1, createdAt: -1 }, 1);       // Most Liked
+      await pickTop({ views: -1, likes: -1 }, 2);            // Most Popular
+      await pickTop({ searchHits: -1, views: -1 }, 3);       // Featured
 
-      // --- SELECTION 2: MOST POPULAR / VIEWS (🥈) ---
-      const mostPopular = await Figure.findOne({ _id: { $nin: Array.from(selectedIds) } })
-        .sort({ views: -1, likes: -1 }) // Fallback to likes if views are tied
-        .exec();
-
-      if (mostPopular) {
-        selectedIds.add(mostPopular._id.toString());
-        featuredFigures.push({ figure: mostPopular, rank: 2 });
-      }
-
-      // --- SELECTION 3: FEATURED / SEARCH HITS (🥉) ---
-      const topSearched = await Figure.findOne({ _id: { $nin: Array.from(selectedIds) } })
-        .sort({ searchHits: -1, views: -1 }) // Fallback to views
-        .exec();
-
-      if (topSearched) {
-        selectedIds.add(topSearched._id.toString());
-        featuredFigures.push({ figure: topSearched, rank: 3 });
-      }
-
-      if (featuredFigures.length === 0) {
-        console.warn('⚠️ No figures found to feature');
+      if (picks.length === 0) {
+        console.warn('⚠️ No approved figures to feature');
         this.clearCache();
         return [];
       }
 
-      // STEP 3: Update selected figures with featured status
+      // Flag selected figures
       const now = new Date();
-      const updatePromises = featuredFigures.map(({ figure, rank }) => {
-        return Figure.findByIdAndUpdate(
-          figure._id,
-          {
-            $set: {
-              isFeatured: true,
-              featuredRank: rank,
-              featuredSince: now,
-            }
-          },
-          { new: true }
-        );
-      });
+      const updated = await Promise.all(
+        picks.map(({ id, rank }) =>
+          Figure.findByIdAndUpdate(
+            id,
+            { $set: { isFeatured: true, featuredRank: rank, featuredSince: now } },
+            { new: true, lean: true }
+          )
+        )
+      );
 
-      const updatedFigures = await Promise.all(updatePromises);
-
-      // Sort back by rank for consistent return
-      updatedFigures.sort((a, b) => a.featuredRank - b.featuredRank);
+      updated.sort((a, b) => a.featuredRank - b.featuredRank);
 
       console.log('✅ Featured figures updated:');
-      updatedFigures.forEach((fig) => {
-        const badge = fig.featuredRank === 1 ? '🥇 Most Liked' : fig.featuredRank === 2 ? '🥈 Most Popular' : '🥉 Featured';
-        const metric = fig.featuredRank === 1 ? `${fig.likes} likes` : fig.featuredRank === 2 ? `${fig.views} views` : `${fig.searchHits} searches`;
-        console.log(`  ${badge}: ${fig.name} (${metric})`);
+      updated.forEach((fig) => {
+        const badge = fig.featuredRank === 1 ? '🥇 Most Liked'
+          : fig.featuredRank === 2 ? '🥈 Most Popular' : '🥉 Featured';
+        console.log(`  ${badge}: ${fig.name}`);
       });
 
-      // PERFORMANCE: Update in-memory cache after DB update
-      cachedFeatured = updatedFigures.map(fig => fig.toObject ? fig.toObject() : fig);
+      cachedFeatured = updated;
       cacheTimestamp = Date.now();
-      console.log('💾 Featured figures cached in memory');
-
-      return updatedFigures;
-
+      return updated;
     } catch (error) {
       console.error('❌ Error updating featured figures:', error);
-      throw error;
+      // Non-fatal: return fallback instead of throwing
+      return this.getTopApprovedFigures();
     }
   }
 
   /**
-   * Get current featured figures (fast query using index)
+   * Get current featured figures from DB.
+   * Falls back to top approved figures if none are flagged.
    */
   static async getFeatured() {
     try {
       const featured = await Figure.find({ isFeatured: true })
-        .sort({ featuredRank: 1 }) // Sort by rank: 1, 2, 3
+        .sort({ featuredRank: 1 })
         .limit(3)
-        .select('+likedBy') // IMPORTANT: Include likedBy field for client-side like status check
-        .lean() // PERFORMANCE: Return plain JS objects instead of Mongoose documents
+        .lean()
         .exec();
 
-      // If no featured figures exist, run initial update
-      if (featured.length === 0) {
-        console.log('⚠️ No featured figures found, initializing...');
-        return await this.updateDailyFeatured();
+      if (featured.length > 0) {
+        cachedFeatured = featured;
+        cacheTimestamp = Date.now();
+        return featured;
       }
 
-      // PERFORMANCE: Update cache with fresh data
-      cachedFeatured = featured;
-      cacheTimestamp = Date.now();
+      // No flagged figures — try to flag some
+      console.log('⚠️ No featured figures flagged, initializing...');
+      const updated = await this.updateDailyFeatured();
+      if (updated.length > 0) return updated;
 
-      return featured;
+      // updateDailyFeatured also returned empty — use direct fallback
+      return this.getTopApprovedFigures();
     } catch (error) {
-      console.error('❌ Error getting featured figures:', error);
-      throw error;
+      console.error('❌ getFeatured error, using fallback:', error.message);
+      return this.getTopApprovedFigures();
     }
   }
 
   /**
-   * Check if featured figures need refresh (older than 24 hours)
-   * Uses in-memory cache timestamp first for speed
-   * @returns {boolean}
+   * Check if featured data is stale (>24h).
    */
   static async needsRefresh() {
+    if (cacheTimestamp && (Date.now() - cacheTimestamp) < CACHE_TTL) {
+      return false;
+    }
     try {
-      // PERFORMANCE: Check in-memory cache timestamp first (fastest path)
-      if (cacheTimestamp) {
-        const hoursSinceCache = (Date.now() - cacheTimestamp) / (1000 * 60 * 60);
-        if (hoursSinceCache < 1) {
-          // Cache is fresh, check if DB data needs refresh
-          // But only query DB if cache is > 1 hour old
-          return false;
-        }
-      }
-
       const featured = await Figure.findOne({ isFeatured: true })
         .sort({ featuredSince: -1 })
         .select('featuredSince')
         .lean();
-
-      if (!featured || !featured.featuredSince) {
-        return true; // No featured figures or no timestamp
-      }
-
-      const hoursSinceUpdate = (Date.now() - featured.featuredSince.getTime()) / (1000 * 60 * 60);
-      return hoursSinceUpdate >= 24;
-
-    } catch (error) {
-      console.error('❌ Error checking refresh status:', error);
-      return true; // Refresh on error to be safe
+      if (!featured || !featured.featuredSince) return true;
+      return (Date.now() - featured.featuredSince.getTime()) >= 24 * 60 * 60 * 1000;
+    } catch {
+      return true;
     }
   }
 
   /**
-   * Smart get: Returns in-memory cached featured figures, refreshes if needed
-   * PERFORMANCE: Checks in-memory cache first (sub-millisecond), then DB cache
-   * IMPORTANT: Never blocks on needsRefresh() - that check happens in background
+   * Main entry point: returns featured figures as fast as possible.
+   * 1. In-memory cache (sub-ms)
+   * 2. DB flagged figures (indexed query)
+   * 3. Fallback to top approved figures
+   * Background refresh if stale.
    */
   static async getOrRefreshFeatured() {
-    try {
-      // PERFORMANCE: Check in-memory cache first (fastest path - sub-millisecond)
-      if (cachedFeatured && cacheTimestamp && (Date.now() - cacheTimestamp) < CACHE_TTL) {
-        console.log('⚡ Returning in-memory cached featured figures');
-        return cachedFeatured;
-      }
-
-      // PERFORMANCE FIX: Get featured data from DB immediately (fast indexed query)
-      // Don't block on needsRefresh() check - that was causing the slowdown
-      const featured = await this.getFeatured();
-
-      // BACKGROUND: Check if data is stale and needs update (non-blocking)
-      // This runs after returning data so users get instant response
-      this.needsRefresh().then(needsUpdate => {
-        if (needsUpdate) {
-          console.log('🔄 Featured figures are stale (>24h), triggering background refresh...');
-          this.updateDailyFeatured().catch(err =>
-            console.error('Background refresh failed:', err.message)
-          );
-        }
-      }).catch(() => {/* ignore background check errors */ });
-
-      return featured;
-    } catch (error) {
-      console.error('❌ Error in getOrRefreshFeatured:', error);
-      // Fallback: just get current featured figures
-      return await this.getFeatured();
+    // Fast path: in-memory cache
+    if (cachedFeatured && cachedFeatured.length > 0 && cacheTimestamp && (Date.now() - cacheTimestamp) < CACHE_TTL) {
+      return cachedFeatured;
     }
+
+    const featured = await this.getFeatured();
+
+    // Background staleness check (non-blocking)
+    this.needsRefresh().then(stale => {
+      if (stale) {
+        console.log('🔄 Featured stale (>24h), refreshing in background...');
+        this.updateDailyFeatured().catch(() => {});
+      }
+    }).catch(() => {});
+
+    return featured;
   }
 }
 
 module.exports = FeaturedFiguresService;
-

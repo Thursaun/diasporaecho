@@ -345,63 +345,60 @@ const getFigures = async () => {
 const getFeaturedFigures = async () => {
   const STORAGE_KEY = 'diaspora_featured';
   const STORAGE_TIMESTAMP_KEY = 'diaspora_featured_ts';
-  const STALE_THRESHOLD = 60 * 60 * 1000; // 1 hour (featured rotate less often)
+  const STALE_THRESHOLD = 60 * 60 * 1000; // 1 hour
 
   try {
     performanceTracker.start('getFeaturedFigures');
 
-    // PERFORMANCE: Check localStorage for instant homepage load
+    // 1. Fresh localStorage cache → return instantly
     const cachedData = localStorage.getItem(STORAGE_KEY);
     const cachedTimestamp = parseInt(localStorage.getItem(STORAGE_TIMESTAMP_KEY) || '0');
     const isStale = Date.now() - cachedTimestamp > STALE_THRESHOLD;
 
     if (cachedData && !isStale) {
       const figures = JSON.parse(cachedData);
-      console.log(`⚡ Loaded ${figures.length} featured figures from fresh localStorage`);
       performanceTracker.end('getFeaturedFigures');
       return figures;
     }
 
-    // PERFORMANCE: Use prefetched data from index.html (started before React loaded)
-    // This eliminates the waterfall: HTML→JS→React→useEffect→fetch
+    // 2. Try the prefetch promise (started in index.html before React loaded)
     let data = null;
     if (window.__prefetchedFeatured) {
-      console.log('🚀 Using prefetched featured figures (started in index.html)');
-      data = await window.__prefetchedFeatured;
+      try {
+        data = await window.__prefetchedFeatured;
+      } catch {
+        data = null;
+      }
       window.__prefetchedFeatured = null; // Consume once
     }
 
-    // If prefetch failed or was already consumed, fetch normally with shorter timeout
-    if (!data || !Array.isArray(data) || data.length === 0) {
+    // 3. If prefetch failed or empty, try network directly
+    if (!Array.isArray(data) || data.length === 0) {
+      // If we have stale cache, return it immediately and refresh in background
       if (cachedData) {
-        // Return stale cache immediately, refresh in background
-        const figures = JSON.parse(cachedData);
-        console.log(`⚡ Returning stale localStorage cache (${figures.length} figures), refreshing in background`);
+        const stale = JSON.parse(cachedData);
         fetchWithTimeout(`${BASE_URL}/figures/featured`, {}, 10000, 1, 'FEATURED')
-          .then(freshData => {
-            if (Array.isArray(freshData) && freshData.length > 0) {
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(freshData));
+          .then(fresh => {
+            if (Array.isArray(fresh) && fresh.length > 0) {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
               localStorage.setItem(STORAGE_TIMESTAMP_KEY, Date.now().toString());
             }
           })
           .catch(() => {});
         performanceTracker.end('getFeaturedFigures');
-        return figures;
+        return stale;
       }
 
-      console.log('🌐 No cache, fetching featured figures from network...');
+      // No cache at all — must wait for network
       data = await fetchWithTimeout(`${BASE_URL}/figures/featured`, {}, 10000, 1, 'FEATURED');
     }
 
-    // Cache to localStorage
+    // 4. Cache the fresh data
     if (Array.isArray(data) && data.length > 0) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         localStorage.setItem(STORAGE_TIMESTAMP_KEY, Date.now().toString());
-        console.log(`💾 Cached ${data.length} featured figures to localStorage`);
-      } catch (e) {
-        console.warn('localStorage full, skipping featured cache:', e.message);
-      }
+      } catch { /* storage full */ }
     }
 
     performanceTracker.end('getFeaturedFigures');
@@ -411,16 +408,19 @@ const getFeaturedFigures = async () => {
     performanceTracker.end('getFeaturedFigures');
     console.error("❌ Error fetching featured figures:", error);
 
-    // FALLBACK: Try localStorage first
-    const cachedData = localStorage.getItem(STORAGE_KEY);
-    if (cachedData) {
-      console.log('🔄 Network failed, using localStorage fallback for featured');
-      return JSON.parse(cachedData);
-    }
+    // Fallback chain: localStorage → regular figures
+    try {
+      const cachedData = localStorage.getItem(STORAGE_KEY);
+      if (cachedData) return JSON.parse(cachedData);
+    } catch { /* ignore */ }
 
-    // Last resort: fallback to regular figures
-    console.log("🔄 Falling back to regular figures...");
-    return getFigures().then(figures => figures.slice(0, 6));
+    // Last resort: use the /figures endpoint and take the first 3
+    try {
+      const figures = await getFigures();
+      return figures.slice(0, 3);
+    } catch {
+      return [];
+    }
   }
 };
 
