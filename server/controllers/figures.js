@@ -164,7 +164,8 @@ const getFigureByWikipediaId = async (req, res, next) => {
       likedBy: [],
       categories: ["Scholars & Educators"],
       occupation: [],
-      owners: []
+      owners: [],
+      status: 'pending', // New figures require admin approval before appearing in Echoes
     });
 
     try {

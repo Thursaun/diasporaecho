@@ -558,9 +558,11 @@ const FigureCard = memo(function FigureCard({
     </div>
   );
 }, (prevProps, nextProps) => {
-  // PERFORMANCE: Custom comparison function to prevent unnecessary re-renders
-  // Only re-render if these specific props change
-  const shouldSkipRender = (
+  // PERFORMANCE: Custom comparison to prevent unnecessary re-renders
+  // Guard against null/undefined figure (crashes the entire card grid otherwise)
+  if (!prevProps.figure || !nextProps.figure) return prevProps.figure === nextProps.figure;
+
+  return (
     prevProps.figure._id === nextProps.figure._id &&
     prevProps.figure.wikipediaId === nextProps.figure.wikipediaId &&
     prevProps.figure.likes === nextProps.figure.likes &&
@@ -571,8 +573,6 @@ const FigureCard = memo(function FigureCard({
     prevProps.onLoginClick === nextProps.onLoginClick &&
     prevProps.badge === nextProps.badge
   );
-
-  return shouldSkipRender;
 });
 
 export default FigureCard;

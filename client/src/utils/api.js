@@ -446,18 +446,16 @@ const searchFigures = async (params = {}) => {
     const queryParams = new URLSearchParams();
     queryParams.append("query", query.trim());
 
-    // SEARCH STRATEGY: Always search Wikipedia with exact match DB prioritization
-    // This uses the /api/search endpoint which:
-    // 1. Checks for exact match in database
-    // 2. Searches Wikipedia for all results
-    // 3. Filters out duplicates already in DB
-    // 4. Returns exact match first, then Wikipedia results (without auto-saving)
-    console.log("🔍 Searching Wikipedia with DB exact match check...");
+    // SEARCH STRATEGY: Local DB first, Wikipedia fallback for new discoveries
+    // The /api/search endpoint:
+    // 1. Searches approved figures in local database first
+    // 2. If <5 local results, supplements with Wikipedia results
+    // 3. Deduplicates and ranks (DB results prioritized)
     const results = await fetchWithTimeout(
       `${BASE_URL}/search?${queryParams.toString()}`,
       {},
-      30000, // 30 second timeout for Wikipedia search
-      2,
+      15000, // 15s timeout (DB is fast, Wikipedia may be slow)
+      1,
       'SEARCH'
     );
 

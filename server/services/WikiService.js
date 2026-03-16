@@ -144,7 +144,7 @@ const searchController = async (req, res) => {
     }
 
     const normalizedTerm = searchTerm.trim().toLowerCase();
-    const cacheKey = `wiki-search:${normalizedTerm}`;
+    const cacheKey = `search:${normalizedTerm}`;
 
     // Check cache first (instant response)
     const cached = cacheService.get(cacheKey);
@@ -156,59 +156,100 @@ const searchController = async (req, res) => {
       return res.json(cached);
     }
 
-    console.log("🔍 Wikipedia-only search for:", searchTerm);
     const startTime = Date.now();
 
-    // WIKIPEDIA-ONLY: Query Wikipedia directly for all search results
-    // This ensures consistent, accurate results from the source
-    let wikiResults = [];
+    // ---- STEP 1: Search local database FIRST (fast, curated collection) ----
+    console.log("🔍 Searching local DB first for:", searchTerm);
+    let localResults = [];
     try {
-      wikiResults = await withTimeout(searchFiguresWithCache(searchTerm), 8000);
-      console.log(`✅ Found ${wikiResults.length} Wikipedia results in ${Date.now() - startTime}ms`);
-    } catch (err) {
-      console.warn(`⚠️ Wikipedia search failed for "${searchTerm}":`, err.message);
-      return res.status(503).json({
-        message: "Search temporarily unavailable. Please try again.",
-        results: []
+      // Text search + regex fallback for partial matches
+      const textResults = await Figure.find(
+        { $text: { $search: searchTerm }, status: { $nin: ['pending', 'rejected'] } },
+        { score: { $meta: "textScore" } }
+      ).select("-owners").sort({ score: { $meta: "textScore" } }).lean().limit(20);
+
+      const regexResults = await Figure.find({
+        status: { $nin: ['pending', 'rejected'] },
+        $or: [
+          { name: { $regex: searchTerm, $options: 'i' } },
+          { occupation: { $in: [new RegExp(searchTerm, 'i')] } },
+          { tags: { $in: [new RegExp(searchTerm, 'i')] } },
+        ]
+      }).select("-owners").lean().limit(20);
+
+      // Deduplicate
+      const seen = new Set();
+      localResults = [...textResults, ...regexResults].filter(fig => {
+        const id = fig._id.toString();
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
       });
+
+      console.log(`📚 Local DB: found ${localResults.length} approved results in ${Date.now() - startTime}ms`);
+    } catch (err) {
+      console.warn("Local search error (non-fatal):", err.message);
     }
 
-    // Filter: Only include results with valid images (no placeholders)
-    const validResults = wikiResults.filter(fig =>
-      fig.imageUrl && !fig.imageUrl.includes("placeholder")
-    );
+    // Mark local results and track their wikipediaIds so we can dedupe against Wikipedia
+    const localWikiIds = new Set(localResults.map(f => f.wikipediaId).filter(Boolean));
+    const markedLocal = localResults.map(fig => ({ ...fig, _source: 'database' }));
 
-    // Sort by relevance: exact match first, then name starts with, then rest
-    const sortedResults = validResults.sort((a, b) => {
-      const term = searchTerm.toLowerCase();
+    // ---- STEP 2: If local results are insufficient, search Wikipedia ----
+    let wikiResults = [];
+    if (localResults.length < 5) {
+      console.log(`🌐 Only ${localResults.length} local results, searching Wikipedia...`);
+      try {
+        const rawWiki = await withTimeout(searchFiguresWithCache(searchTerm), 8000);
+
+        // Filter: valid images, not already in local results
+        wikiResults = rawWiki
+          .filter(fig =>
+            fig.imageUrl &&
+            !fig.imageUrl.includes("placeholder") &&
+            !localWikiIds.has(fig.wikipediaId)
+          )
+          .slice(0, 20 - localResults.length)
+          .map(fig => ({ ...fig, _source: 'wikipedia' }));
+
+        console.log(`🌐 Wikipedia: found ${wikiResults.length} additional results in ${Date.now() - startTime}ms`);
+      } catch (err) {
+        console.warn(`⚠️ Wikipedia search failed (non-fatal):`, err.message);
+      }
+    }
+
+    // ---- STEP 3: Combine — local first, then Wikipedia ----
+    const combined = [...markedLocal, ...wikiResults];
+
+    // Sort: exact name match first, then starts-with, then contains, then rest
+    const finalResults = combined.sort((a, b) => {
+      const term = normalizedTerm;
       const aName = a.name.toLowerCase();
       const bName = b.name.toLowerCase();
 
-      // Exact match first
-      if (aName === term) return -1;
-      if (bName === term) return 1;
+      // Database results always rank above Wikipedia for same relevance tier
+      const aLocal = a._source === 'database' ? 100 : 0;
+      const bLocal = b._source === 'database' ? 100 : 0;
 
-      // Starts with term
-      if (aName.startsWith(term) && !bName.startsWith(term)) return -1;
-      if (!aName.startsWith(term) && bName.startsWith(term)) return 1;
+      // Exact match
+      if (aName === term && bName !== term) return -1;
+      if (bName === term && aName !== term) return 1;
 
-      // Contains term
-      if (aName.includes(term) && !bName.includes(term)) return -1;
-      if (!aName.includes(term) && bName.includes(term)) return 1;
+      // Starts with
+      const aStarts = aName.startsWith(term) ? 50 : 0;
+      const bStarts = bName.startsWith(term) ? 50 : 0;
 
-      return 0;
+      // Contains
+      const aContains = aName.includes(term) ? 25 : 0;
+      const bContains = bName.includes(term) ? 25 : 0;
+
+      return (bLocal + bStarts + bContains) - (aLocal + aStarts + aContains);
     });
 
-    // Limit to 20 results
-    const finalResults = sortedResults.slice(0, 20).map(fig => ({
-      ...fig,
-      _source: 'wikipedia' // Mark all as Wikipedia results
-    }));
-
-    // Cache Wikipedia results
+    // Cache combined results
     cacheService.set(cacheKey, finalResults, CACHE_TTL.SEARCH_LOCAL);
 
-    console.log(`📊 Returning ${finalResults.length} Wikipedia results in ${Date.now() - startTime}ms`);
+    console.log(`📊 Returning ${finalResults.length} results (${markedLocal.length} DB + ${wikiResults.length} Wiki) in ${Date.now() - startTime}ms`);
 
     res.set({
       'Cache-Control': 'public, max-age=600, stale-while-revalidate=120',
