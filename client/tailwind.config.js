@@ -15,12 +15,16 @@ export default {
       '2xl': '1536px',
     },
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
       colors: {
         'primary': '#28715E',
         'secondary': '#632420',
         'accent': '#C95C2C',
         'dark': '#1C1A1A',
-        'light': '#E8AC49',
+        'light': '#FAFAFA',
+        'gold': '#E8AC49',
       },
       keyframes: {
         shake: {

@@ -70,7 +70,7 @@ function Header({ loggedIn, onRegisterClick, onLoginClick, onSignOut }) {
                   }`}
                 />
               </div>
-              <span className={`font-bold bg-gradient-to-r from-white via-white to-secondary bg-clip-text text-transparent group-hover:from-secondary group-hover:to-white transition-all duration-300 ${
+              <span className={`font-extrabold tracking-tight bg-gradient-to-r from-white via-white to-secondary bg-clip-text text-transparent group-hover:from-secondary group-hover:to-white transition-all duration-300 ${
                 isScrolled ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl md:text-3xl'
               }`}>
                 Diaspora Echo
@@ -130,7 +130,7 @@ function Header({ loggedIn, onRegisterClick, onLoginClick, onSignOut }) {
                   </button>
                   <button
                     onClick={onRegisterClick}
-                    className="px-5 py-2 text-sm xl:text-base font-semibold rounded-full bg-gradient-to-r from-secondary to-secondary/80 text-white hover:shadow-lg hover:shadow-secondary/40 hover:scale-105 transition-all duration-300"
+                    className="px-5 py-2 text-sm xl:text-base font-semibold rounded-full bg-primary text-white hover:shadow-lg hover:shadow-primary/40 hover:scale-105 transition-all duration-300"
                   >
                     Sign Up
                   </button>
@@ -275,7 +275,7 @@ function Header({ loggedIn, onRegisterClick, onLoginClick, onSignOut }) {
                     onRegisterClick();
                     closeMobileMenu();
                   }}
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-secondary to-secondary/80 text-white font-semibold hover:shadow-lg hover:shadow-secondary/40 transition-all duration-300"
+                  className="w-full py-4 rounded-2xl bg-primary text-white font-semibold hover:shadow-lg hover:shadow-primary/40 transition-all duration-300"
                 >
                   Sign Up Free
                 </button>

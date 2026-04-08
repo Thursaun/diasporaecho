@@ -296,14 +296,14 @@ const FigureCard = memo(function FigureCard({
              </div>
             )}
             
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-85 transition-all duration-700 group-hover:opacity-95"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-85 transition-all duration-700 group-hover:opacity-95"></div>
           </div>
 
           {/* Badges & Like Button (Front) */}
           <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 z-20 flex justify-between items-start pointer-events-none">
             <div className="flex flex-wrap gap-2 pointer-events-auto">
               {displayYears && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/95 backdrop-blur-md text-gray-900 shadow-lg">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/90 text-dark border border-gold/30 shadow-lg">
                   {displayYears}
                 </span>
               )}
@@ -312,7 +312,7 @@ const FigureCard = memo(function FigureCard({
                {badge && <div className="mb-0.5">{badge}</div>}
                {!hideInteractions && (
                  <button onClick={handleLikeClick} onMouseEnter={handleButtonMouseEnter} onMouseLeave={handleButtonMouseLeave} className={`flex flex-col items-center gap-1 transition-all duration-150 ${isLiked ? "scale-110" : "opacity-90 hover:scale-110"}`}>
-                   <div className={`p-2.5 rounded-full shadow-lg border ${isLiked ? "bg-secondary text-white border-secondary" : "bg-white/20 text-white border-white/20"}`}>
+                   <div className={`p-2.5 rounded-full shadow-lg border ${isLiked ? "bg-dark/60 backdrop-blur text-white border-white/20" : "bg-white/20 text-white border-white/20"}`}>
                       <svg viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" className="w-5 h-5">
                         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                       </svg>
@@ -330,7 +330,7 @@ const FigureCard = memo(function FigureCard({
              {visibleTags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
                     {visibleTags.map((t, i) => (
-                        <span key={i} className="text-xs bg-white/20 text-white px-2 py-1 rounded-full">{t}</span>
+                        <span key={i} className="text-xs bg-dark/30 text-white px-2 py-1 rounded-full">{t}</span>
                     ))}
                     {hasMoreTags && <span className="text-xs text-white/80">+{tags.length - 3}</span>}
                 </div>
@@ -338,7 +338,7 @@ const FigureCard = memo(function FigureCard({
 
              {/* MODERN: Enhanced Bottom Actions with glass morphism */}
              <div className="flex justify-between items-end gap-1.5 sm:gap-2 md:gap-3 opacity-0 translate-y-6 transition-all duration-600 delay-100 ease-out group-hover:opacity-100 group-hover:translate-y-0 w-full">
-               <div className="hidden sm:flex items-center gap-1.5 text-xs text-white/80 bg-black/30 backdrop-blur-md px-2 sm:px-3 py-1.5 rounded-lg flex-shrink-0 border border-white/10">
+               <div className="hidden sm:flex items-center gap-1.5 text-xs text-white/80 bg-dark/50 backdrop-blur-sm px-2 sm:px-3 py-1.5 rounded-lg flex-shrink-0 border border-white/10">
                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                    <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
                  </svg>

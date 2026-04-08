@@ -236,13 +236,13 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
             <input
               type="text"
               placeholder="Search for historical figures..."
-              className="flex-grow p-3 sm:p-4 rounded-lg text-black text-base sm:text-lg focus:outline-none focus:ring-2 focus:ring-white/30"
+              className="flex-grow p-3 sm:p-4 rounded-lg text-black text-base sm:text-lg border border-gray-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-white/30"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             <button
               type="submit"
-              className="bg-dark text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg hover:bg-opacity-90 transition duration-300 font-semibold text-base sm:text-lg min-h-[44px]"
+              className="bg-primary text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg hover:bg-opacity-90 transition duration-300 font-semibold text-base sm:text-lg min-h-[44px]"
               disabled={isLoading}
             >
               {isLoading ? "Searching..." : "Search"}
@@ -254,10 +254,10 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
       <section className={`bg-white transition-all duration-500 ${searchQuery ? 'py-4 sm:py-6' : 'py-8 sm:py-12 lg:py-16'}`}>
         <div className="container mx-auto px-4">
           <div className={`text-center transition-all duration-500 ${searchQuery ? 'mb-3 sm:mb-4' : 'mb-6 sm:mb-8 lg:mb-12'}`}>
-            <h2 className={`font-bold text-gray-900 transition-all duration-500 ${searchQuery ? 'text-base sm:text-lg md:text-xl mb-1 sm:mb-2' : 'text-2xl sm:text-3xl md:text-4xl mb-3 sm:mb-4'}`}>
+            <h2 className={`font-extrabold tracking-tight text-gray-900 transition-all duration-500 ${searchQuery ? 'text-base sm:text-lg md:text-xl mb-1 sm:mb-2' : 'text-2xl sm:text-3xl md:text-4xl mb-3 sm:mb-4'}`}>
               Featured Figures
             </h2>
-            <div className={`bg-gradient-to-r from-secondary to-primary mx-auto transition-all duration-500 ${searchQuery ? 'w-16 sm:w-20 h-px mb-1 sm:mb-2' : 'w-48 sm:w-64 md:w-72 h-1 mb-3 sm:mb-4'}`}></div>
+            <div className={`bg-gold mx-auto transition-all duration-500 ${searchQuery ? 'w-16 sm:w-20 h-px mb-1 sm:mb-2' : 'w-48 sm:w-64 md:w-72 h-1 mb-3 sm:mb-4'}`}></div>
             {!searchQuery && (
               <p className="text-sm sm:text-base lg:text-lg text-gray-600 max-w-2xl mx-auto px-4">
                 Discover the most celebrated figures whose stories continue to inspire and educate
