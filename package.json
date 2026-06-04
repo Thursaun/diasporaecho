@@ -1,0 +1,11 @@
+{
+  "name": "diasporaecho-root",
+  "version": "1.0.0",
+  "description": "Root management package for Diaspora Echoes",
+  "scripts": {
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "dev": "npx -y concurrently -n \"server,client\" -c \"blue,green\" \"npm run dev:server\" \"npm run dev:client\"",
+    "start": "npm run dev"
+  }
+}
