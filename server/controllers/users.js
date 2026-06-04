@@ -1,7 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
-const Figure = require('../models/figure');
 const BadRequestError = require('../utils/errors/BadRequestError');
 const NotFoundError = require('../utils/errors/NotFoundError');
 const ConflictError = require('../utils/errors/ConflictError');
@@ -53,81 +52,7 @@ function login(req, res, next) {
         .catch(next);
 }
 
-const saveFigure = (req, res, next) => {
-  const userId = req.user._id;
-  const figureData = req.body;
 
-  console.log("Saving figure:", figureData);
-  console.log("User ID:", userId);
-
-  if (!figureData.name) {
-    return res.status(400).json({ message: "Figure name is required" });
-  }
-
-  const wikipediaId = figureData.wikipediaId || 
-    `custom_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-  console.log("Using wikipediaId:", wikipediaId);
-
-  // Check if figure already exists by wikipediaId
-  Figure.findOne({ wikipediaId })
-    .then((existingFigure) => {
-      if (existingFigure) {
-        console.log("Figure exists, adding user to owners");
-        if (!existingFigure.owners.includes(userId)) {
-          existingFigure.owners.push(userId);
-        }
-        return existingFigure.save();
-      } else {
-        console.log("Creating new figure with wikipediaId:", wikipediaId);
-        const newFigure = new Figure({
-          name: figureData.name,
-          description: figureData.description || "",
-          imageUrl: figureData.imageUrl || figureData.image || "",
-          years: figureData.years || "",
-          categories: figureData.categories || (figureData.category ? [figureData.category] : ["Scholars & Educators"]),
-          tags: figureData.tags || [],
-          source: figureData.source || "Wikipedia",
-          wikipediaId: wikipediaId,
-          owners: [userId],
-          likes: 0,
-          likedBy: [],
-        });
-        return newFigure.save();
-      }
-    })
-    .then((savedFigure) => {
-      console.log("Figure saved, updating user");
-      return User.findById(userId).then((user) => {
-        if (!user) {
-          throw new Error("User not found");
-        }
-        
-        // Use the MongoDB ObjectId, not string comparison
-        const figureExists = user.savedFigures.some(savedId => 
-          savedId.toString() === savedFigure._id.toString()
-        );
-        
-        if (!figureExists) {
-          user.savedFigures.push(savedFigure._id);
-          return user.save().then(() => savedFigure);
-        }
-        return savedFigure;
-      });
-    })
-    .then((finalFigure) => {
-      console.log("Save operation completed successfully");
-      const { owners, ...publicFigure } = finalFigure.toObject();
-      res.status(200).json(publicFigure);
-    })
-    .catch((error) => {
-      console.error("Error in saveFigure:", error);
-      res.status(500).json({ 
-        message: "Failed to save figure", 
-        error: error.message 
-      });
-    });
-};
 const getSavedFigures = (req, res, next) => {
     const { _id: userId } = req.user;
 
@@ -151,6 +76,5 @@ module.exports = {
     getCurrentUser,
     createUser,
     login,
-    saveFigure,
     getSavedFigures,
 };

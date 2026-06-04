@@ -45,7 +45,7 @@ function Echoes({
         console.log('⚡ Initializing with cached figures from localStorage');
         return JSON.parse(cached);
       }
-    } catch (e) { /* ignore */ }
+    } catch { /* ignore */ }
     return [];
   });
 
@@ -119,7 +119,7 @@ function Echoes({
         })
       );
     }
-  }, [onLikeFigureClick]);
+  }, [onLikeFigureClick, setAllFigures]);
 
   // =============================================================================
   // PERFORMANCE IMPROVEMENT: Memoized Calculations
@@ -272,6 +272,7 @@ function Echoes({
     return () => {
       clearTimeout(timeoutId);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // =============================================================================
@@ -361,7 +362,7 @@ function Echoes({
             )}
             {searchQuery && (
               <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
-                "{searchQuery}"
+                &ldquo;{searchQuery}&rdquo;
                 <button onClick={() => setSearchQuery("")} className="hover:text-gray-800">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

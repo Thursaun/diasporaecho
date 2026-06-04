@@ -19,7 +19,7 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
         console.log('⚡ Initializing with cached featured figures from localStorage');
         return JSON.parse(cached);
       }
-    } catch (e) { /* ignore */ }
+    } catch { /* ignore */ }
     return [];
   });
   // Only show loading if we have NO cached featured data
@@ -152,7 +152,7 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
         // CACHE: Update localStorage with fresh data (includes metadata)
         try {
           localStorage.setItem('diaspora_featured', JSON.stringify(figures));
-        } catch (e) { /* ignore storage errors */ }
+        } catch { /* ignore storage errors */ }
 
         // PERFORMANCE: Preload featured images for instant display
         figures.slice(0, 3).forEach((figure, index) => {
@@ -168,6 +168,7 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
         console.error("❌ Error fetching featured figures:", err);
         setFeaturedLoading(false);
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // PERFORMANCE: Debounced search function to reduce API calls
@@ -396,20 +397,56 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
             )}
 
             {searchResults.length > 0 && !isLoading && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                {searchResults.map((figure) => (
-                  <div key={figure.wikipediaId || figure._id || `temp-${Date.now()}`} className="mx-auto w-full max-w-sm">
-                    <LazyFigureCard
-                      figure={figure}
-                      onLikeFigureClick={handleLikeClick}
-                      onSaveFigureClick={onSaveFigureClick}
-                      onLoginClick={onLoginClick}
-                      isSaved={checkIsSaved(figure)}
-                      isLiked={checkIsLiked(figure)}
-                      hideInteractions={true}
-                    />
+              <div className="space-y-12">
+                {/* 1. Name Match Section (Includes Exact and Name Matches) */}
+                {searchResults.some(f => f.matchType === 'Exact Matches' || f.matchType === 'Name Matches' || !f.matchType) && (
+                  <div>
+                    <h3 className="text-sm font-bold text-secondary uppercase tracking-wider mb-4 border-b border-gray-200 pb-1.5 flex items-center gap-1.5">
+                      <span className="text-base">👤</span> Name Match
+                    </h3>
+                    <div className="flex overflow-x-auto gap-4 sm:gap-6 pb-4 snap-x scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+                      {searchResults
+                        .filter(f => f.matchType === 'Exact Matches' || f.matchType === 'Name Matches' || !f.matchType)
+                        .map((figure) => (
+                          <div key={figure.wikipediaId || figure._id || `name-${figure.name}`} className="w-[280px] sm:w-[320px] shrink-0 snap-start">
+                            <LazyFigureCard
+                              figure={figure}
+                              onLikeFigureClick={handleLikeClick}
+                              onSaveFigureClick={onSaveFigureClick}
+                              onLoginClick={onLoginClick}
+                              isSaved={checkIsSaved(figure)}
+                              isLiked={checkIsLiked(figure)}
+                              hideInteractions={true}
+                            />
+                          </div>
+                        ))}
+                    </div>
                   </div>
-                ))}
+                )}
+
+                {/* 2. Related Matches Section */}
+                {searchResults.some(f => f.matchType === 'Related Matches') && (
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 border-b border-gray-200 pb-1.5 flex items-center gap-1.5">
+                      <span className="text-base">💡</span> Related Matches
+                    </h3>
+                    <div className="flex overflow-x-auto gap-4 sm:gap-6 pb-4 snap-x scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+                      {searchResults.filter(f => f.matchType === 'Related Matches').map((figure) => (
+                        <div key={figure.wikipediaId || figure._id || `related-${figure.name}`} className="w-[280px] sm:w-[320px] shrink-0 snap-start">
+                          <LazyFigureCard
+                            figure={figure}
+                            onLikeFigureClick={handleLikeClick}
+                            onSaveFigureClick={onSaveFigureClick}
+                            onLoginClick={onLoginClick}
+                            isSaved={checkIsSaved(figure)}
+                            isLiked={checkIsLiked(figure)}
+                            hideInteractions={true}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -1,5 +1,6 @@
 const router = require('express').Router();
-const { getCurrentUser, saveFigure, getSavedFigures } = require('../controllers/users');
+const { getCurrentUser, getSavedFigures } = require('../controllers/users');
+const { saveFigure } = require('../controllers/figures');
 const auth = require('../middlewares/auth');
 
 router.use(auth);

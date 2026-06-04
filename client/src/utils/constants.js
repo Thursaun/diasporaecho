@@ -1,6 +1,6 @@
-export const BASE_URL = process.env.NODE_ENV === 'production' 
+export const BASE_URL = import.meta.env.PROD 
   ? 'https://diasporaecho.onrender.com/api'
-  : 'http://localhost:3000/api';
+  : 'http://localhost:3001/api';
 
 export const ERROR_MESSAGES = {
     NETWORK_ERROR: 'Network error. Please try again later.',

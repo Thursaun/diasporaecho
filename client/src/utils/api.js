@@ -241,17 +241,7 @@ const getHeaders = () => {
   };
 };
 
-/**
- * Legacy response checker for backward compatibility
- * @param {Response} res - Fetch response object
- * @returns {Promise} - JSON response or rejection
- */
-const checkResponse = (res) => {
-  if (res.ok) {
-    return res.json();
-  }
-  return Promise.reject(`Error: ${res.status}`);
-};
+
 
 // =============================================================================
 // PERFORMANCE IMPROVEMENT: Optimized Figure API Functions
@@ -516,7 +506,7 @@ const getFigureByWikipediaId = async (wikipediaId) => {
       const data = await fetchWithTimeout(`${BASE_URL}/figures/wiki/${cleanId}`);
       performanceTracker.end('getFigureByWikipediaId');
       return data;
-    } catch (dbError) {
+    } catch {
       console.log("📥 Figure not in DB, fetching from Wikipedia...");
     }
 

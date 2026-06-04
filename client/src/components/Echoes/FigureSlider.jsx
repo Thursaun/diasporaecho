@@ -82,7 +82,7 @@ function FigureSlider({ onSaveFigureClick, onLikeFigureClick }) {
         console.log('⚡ FigureSlider: Initializing from localStorage cache');
         return JSON.parse(cached);
       }
-    } catch (e) { /* ignore parse errors */ }
+    } catch { /* ignore parse errors */ }
     return [];
   });
   // Only show loading if no cached data exists
@@ -124,7 +124,7 @@ function FigureSlider({ onSaveFigureClick, onLikeFigureClick }) {
           // Update localStorage cache
           try {
             localStorage.setItem('diaspora_featured', JSON.stringify(data));
-          } catch (e) { /* ignore storage errors */ }
+          } catch { /* ignore storage errors */ }
         } else if (figures.length === 0) {
           // Only set error if we don't have cached data to show
           setError("No featured echoes found.");
@@ -146,6 +146,7 @@ function FigureSlider({ onSaveFigureClick, onLikeFigureClick }) {
         preloadLinkRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const goToPrevious = useCallback(() => {

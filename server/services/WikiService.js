@@ -158,98 +158,122 @@ const searchController = async (req, res) => {
 
     const startTime = Date.now();
 
-    // ---- STEP 1: Search local database FIRST (fast, curated collection) ----
-    console.log("🔍 Searching local DB first for:", searchTerm);
-    let localResults = [];
-    try {
-      // Text search + regex fallback for partial matches
-      const textResults = await Figure.find(
-        { $text: { $search: searchTerm }, status: { $nin: ['pending', 'rejected'] } },
-        { score: { $meta: "textScore" } }
-      ).select("-owners").sort({ score: { $meta: "textScore" } }).lean().limit(20);
+    // ---- STEP 1: Search local database and Wikipedia SIMULTANEOUSLY in parallel ----
+    console.log(`🔍 Querying local DB and Wikipedia simultaneously for: "${searchTerm}"`);
+    const [dbResults, rawWiki] = await Promise.all([
+      // DB Search Promise
+      (async () => {
+        try {
+          const textResults = await Figure.find(
+            { $text: { $search: searchTerm }, status: { $nin: ['pending', 'rejected'] } },
+            { score: { $meta: "textScore" } }
+          ).select("-owners").sort({ score: { $meta: "textScore" } }).lean().limit(20);
 
-      const regexResults = await Figure.find({
-        status: { $nin: ['pending', 'rejected'] },
-        $or: [
-          { name: { $regex: searchTerm, $options: 'i' } },
-          { occupation: { $in: [new RegExp(searchTerm, 'i')] } },
-          { tags: { $in: [new RegExp(searchTerm, 'i')] } },
-        ]
-      }).select("-owners").lean().limit(20);
+          const regexResults = await Figure.find({
+            status: { $nin: ['pending', 'rejected'] },
+            $or: [
+              { name: { $regex: searchTerm, $options: 'i' } },
+              { occupation: { $in: [new RegExp(searchTerm, 'i')] } },
+              { tags: { $in: [new RegExp(searchTerm, 'i')] } },
+            ]
+          }).select("-owners").lean().limit(20);
 
-      // Deduplicate
-      const seen = new Set();
-      localResults = [...textResults, ...regexResults].filter(fig => {
-        const id = fig._id.toString();
-        if (seen.has(id)) return false;
-        seen.add(id);
-        return true;
-      });
+          // Deduplicate DB results
+          const seen = new Set();
+          return [...textResults, ...regexResults].filter(fig => {
+            const id = fig._id.toString();
+            if (seen.has(id)) return false;
+            seen.add(id);
+            return true;
+          });
+        } catch (err) {
+          console.warn("Local DB search error (non-fatal):", err.message);
+          return [];
+        }
+      })(),
+      // Wikipedia Search Promise
+      (async () => {
+        try {
+          return await withTimeout(searchFiguresWithCache(searchTerm), 8000);
+        } catch (err) {
+          console.warn("Wikipedia search error (non-fatal):", err.message);
+          return [];
+        }
+      })()
+    ]);
 
-      console.log(`📚 Local DB: found ${localResults.length} approved results in ${Date.now() - startTime}ms`);
-    } catch (err) {
-      console.warn("Local search error (non-fatal):", err.message);
-    }
+    // ---- STEP 2: Filter and deduplicate Wikipedia results against DB ----
+    const localWikiIds = new Set(dbResults.map(f => f.wikipediaId).filter(Boolean));
+    const localNames = new Set(dbResults.map(f => f.name.toLowerCase().trim()));
 
-    // Mark local results and track their wikipediaIds so we can dedupe against Wikipedia
-    const localWikiIds = new Set(localResults.map(f => f.wikipediaId).filter(Boolean));
-    const markedLocal = localResults.map(fig => ({ ...fig, _source: 'database' }));
+    const wikiResults = rawWiki
+      .filter(fig =>
+        fig.imageUrl &&
+        !fig.imageUrl.includes("placeholder") &&
+        !localWikiIds.has(fig.wikipediaId) &&
+        !localNames.has(fig.name.toLowerCase().trim())
+      )
+      .slice(0, 20)
+      .map(fig => ({ ...fig, _source: 'wikipedia' }));
 
-    // ---- STEP 2: If local results are insufficient, search Wikipedia ----
-    let wikiResults = [];
-    if (localResults.length === 0) {
-      console.log(`🌐 No local results, searching Wikipedia as fallback...`);
-      try {
-        const rawWiki = await withTimeout(searchFiguresWithCache(searchTerm), 8000);
-
-        // Filter: valid images, not already in local results
-        wikiResults = rawWiki
-          .filter(fig =>
-            fig.imageUrl &&
-            !fig.imageUrl.includes("placeholder") &&
-            !localWikiIds.has(fig.wikipediaId)
-          )
-          .slice(0, 20)
-          .map(fig => ({ ...fig, _source: 'wikipedia' }));
-
-        console.log(`🌐 Wikipedia: found ${wikiResults.length} additional results in ${Date.now() - startTime}ms`);
-      } catch (err) {
-        console.warn(`⚠️ Wikipedia search failed (non-fatal):`, err.message);
-      }
-    }
-
-    // ---- STEP 3: Combine — local first, then Wikipedia ----
+    const markedLocal = dbResults.map(fig => ({ ...fig, _source: 'database' }));
     const combined = [...markedLocal, ...wikiResults];
 
-    // Sort: exact name match first, then starts-with, then contains, then rest
-    const finalResults = combined.sort((a, b) => {
-      const term = normalizedTerm;
-      const aName = a.name.toLowerCase();
-      const bName = b.name.toLowerCase();
+    // ---- STEP 3: Categorize by match closeness to user input ----
+    // We classify into:
+    // - "Exact Matches" (exact match on figure name)
+    // - "Name Matches" (name starts with or contains the query)
+    // - "Related Matches" (matches in description, occupation, category, tags)
+    const categorizedResults = combined.map(figure => {
+      const nameLower = figure.name.toLowerCase().trim();
+      const termLower = normalizedTerm;
 
-      // Database results always rank above Wikipedia for same relevance tier
-      const aLocal = a._source === 'database' ? 100 : 0;
-      const bLocal = b._source === 'database' ? 100 : 0;
+      let matchType = 'Related Matches';
+      let sortPriority = 3; // 1 = Exact Matches, 2 = Name Matches, 3 = Related Matches
 
-      // Exact match
-      if (aName === term && bName !== term) return -1;
-      if (bName === term && aName !== term) return 1;
+      if (nameLower === termLower) {
+        matchType = 'Exact Matches';
+        sortPriority = 1;
+      } else if (nameLower.startsWith(termLower) || nameLower.includes(termLower)) {
+        matchType = 'Name Matches';
+        sortPriority = 2;
+      } else {
+        matchType = 'Related Matches';
+        sortPriority = 3;
+      }
 
-      // Starts with
-      const aStarts = aName.startsWith(term) ? 50 : 0;
-      const bStarts = bName.startsWith(term) ? 50 : 0;
+      // Calculate secondary scoring within same matchType tier
+      let secondaryScore = 0;
+      if (figure._source === 'database') {
+        secondaryScore += 50; // Boost local database figures
+      }
+      if (figure.likes) {
+        secondaryScore += Math.min(figure.likes, 20); // Muted boost for popular figures
+      }
 
-      // Contains
-      const aContains = aName.includes(term) ? 25 : 0;
-      const bContains = bName.includes(term) ? 25 : 0;
-
-      return (bLocal + bStarts + bContains) - (aLocal + aStarts + aContains);
+      return {
+        ...figure,
+        matchType,
+        _sortPriority: sortPriority,
+        _secondaryScore: secondaryScore
+      };
     });
 
-    // Cache combined results
+    // Sort: first by match type priority, then by database vs wiki priority, then by likes
+    const finalResults = categorizedResults
+      .sort((a, b) => {
+        if (a._sortPriority !== b._sortPriority) {
+          return a._sortPriority - b._sortPriority;
+        }
+        return b._secondaryScore - a._secondaryScore;
+      })
+      // Clean up internal properties before sending response
+      .map(({ _sortPriority, _secondaryScore, _source, ...figure }) => figure);
+
+    // Cache combined and sorted results
     cacheService.set(cacheKey, finalResults, CACHE_TTL.SEARCH_LOCAL);
 
-    console.log(`📊 Returning ${finalResults.length} results (${markedLocal.length} DB + ${wikiResults.length} Wiki) in ${Date.now() - startTime}ms`);
+    console.log(`📊 Returning ${finalResults.length} categorized results (${markedLocal.length} DB + ${wikiResults.length} Wiki) in ${Date.now() - startTime}ms`);
 
     res.set({
       'Cache-Control': 'public, max-age=600, stale-while-revalidate=120',
@@ -346,6 +370,78 @@ const searchFigures = function (params = {}) {
   return fastWikipediaSearch(searchTerm, limit);
 };
 
+// HELPER: Programmatically infer historical era based on active years
+const determineEra = (years) => {
+  if (!years || typeof years !== 'string') return "Unknown Era";
+  const match = years.match(/\b\d{4}\b/);
+  if (!match) return "Unknown Era";
+  const year = parseInt(match[0], 10);
+  
+  if (year < 1865) return "Slavery & Abolition Era";
+  if (year >= 1865 && year <= 1877) return "Reconstruction Era";
+  if (year > 1877 && year <= 1915) return "Jim Crow & Early Activism";
+  if (year > 1915 && year <= 1940) return "Harlem Renaissance & New Negro";
+  if (year > 1940 && year <= 1968) return "Civil Rights Movement";
+  return "Post-Civil Rights & Modern Era";
+};
+
+// HELPER: Extract brief legacy summary
+const extractLegacy = (figure) => {
+  if (!figure) return "";
+  if (figure.legacy) return figure.legacy;
+  if (figure.contributions && figure.contributions.length > 0) return figure.contributions[0];
+  if (figure.description) {
+    const sentences = figure.description.split(/(?<=[.!?])\s+/);
+    if (sentences.length > 0) {
+      const firstSentence = sentences[0].trim();
+      return firstSentence.length > 150 ? firstSentence.substring(0, 147) + "..." : firstSentence;
+    }
+  }
+  return "Renowned contributor to culture, history, and society.";
+};
+
+// HELPER: Extract years from description extract
+const extractYearsFromExtract = (extract) => {
+  if (!extract) return "Unknown";
+  
+  const cleanText = extract.replace(/\s+/g, ' ').replace(/[–—]/g, '-').trim();
+
+  // Pattern 1: Look for "Month Day, Year - Month Day, Year"
+  const fullDateMatch = cleanText.match(/([A-Z][a-z]+ \d{1,2}, \d{4})\s*[-–—]\s*([A-Z][a-z]+ \d{1,2}, \d{4})/);
+  if (fullDateMatch) {
+    const birthYear = fullDateMatch[1].match(/\d{4}/)?.[0];
+    const deathYear = fullDateMatch[2].match(/\d{4}/)?.[0];
+    if (birthYear && deathYear) {
+      return `${birthYear} - ${deathYear}`;
+    }
+  }
+
+  // Pattern 2: Look for year ranges like "1933-2003"
+  const yearRangeMatch = cleanText.match(/\b(\d{4})\s*[-–—]\s*(\d{4})\b/);
+  if (yearRangeMatch) {
+    return `${yearRangeMatch[1]} - ${yearRangeMatch[2]}`;
+  }
+
+  // Pattern 3: Birth year with "born" keyword
+  const bornMatch = cleanText.match(/born[^)]*(\d{4})/i);
+  if (bornMatch) {
+    const deathMatch = cleanText.match(/died[^)]*(\d{4})|(\d{4})\s*[-–—]\s*(\d{4})/i);
+    if (deathMatch) {
+      return deathMatch[3] ? `${deathMatch[2]} - ${deathMatch[3]}` : `${bornMatch[1]} - ${deathMatch[1]}`;
+    } else {
+      return `${bornMatch[1]} - Present`;
+    }
+  }
+
+  // Pattern 4: Simple year range in parentheses
+  const simpleRange = cleanText.match(/\((?:c\.\s*)?(\d{4})\s*[-–—]\s*(\d{4})\)/);
+  if (simpleRange) {
+    return `${simpleRange[1]} - ${simpleRange[2]}`;
+  }
+
+  return "Unknown";
+};
+
 // PERFORMANCE: Optimized single-query Wikipedia search
 async function fastWikipediaSearch(searchTerm, limit) {
   try {
@@ -386,7 +482,8 @@ async function fastWikipediaSearch(searchTerm, limit) {
       action: "query",
       format: "json",
       titles: titlesParam,
-      prop: "pageimages|extracts|pageprops",
+      prop: "pageimages|extracts|pageprops|info",
+      inprop: "url",
       exintro: "true",
       explaintext: "true",
       exsentences: "3",
@@ -408,16 +505,28 @@ async function fastWikipediaSearch(searchTerm, limit) {
     // Format results
     const figures = Object.values(pages)
       .filter(page => page.pageid && page.thumbnail?.source)
-      .map(page => ({
-        wikipediaId: `wiki_${page.pageid}`,
-        name: page.title,
-        description: page.extract || "",
-        imageUrl: page.thumbnail?.source || "",
-        source: "Wikipedia",
-        tags: [],
-        categories: [],
-        occupation: [],
-      }));
+      .map(page => {
+        const extract = page.extract || "";
+        const years = extractYearsFromExtract(extract);
+        const era = determineEra(years);
+        const legacy = extractLegacy({ description: extract });
+        
+        return {
+          wikipediaId: `wiki_${page.pageid}`,
+          name: page.title,
+          description: extract || "No description available",
+          imageUrl: page.thumbnail?.source || "",
+          source: "Wikipedia",
+          sourceUrl: page.fullurl || `https://en.wikipedia.org/?curid=${page.pageid}`,
+          years: years,
+          era: era,
+          legacy: legacy,
+          tags: [],
+          categories: ["Scholars & Educators"],
+          category: "Scholars & Educators",
+          occupation: [],
+        };
+      });
 
     console.log(`✅ Fast search complete: ${figures.length} figures in ${Date.now() - startTime}ms`);
     return figures;

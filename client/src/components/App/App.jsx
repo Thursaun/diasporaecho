@@ -105,21 +105,6 @@ const App = () => {
     localStorage.removeItem('diaspora_figures_ts');
   }, []);
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      checkToken(token)
-        .then((res) => {
-          if (res) {
-            setLoggedIn(true);
-            setCurrentUser(res);
-            fetchSavedFigures();
-          }
-        })
-        .catch((err) => console.log(err));
-    }
-  }, []);
-
   const fetchSavedFigures = useCallback(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -133,6 +118,21 @@ const App = () => {
         });
     }
   }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      checkToken(token)
+        .then((res) => {
+          if (res) {
+            setLoggedIn(true);
+            setCurrentUser(res);
+            fetchSavedFigures();
+          }
+        })
+        .catch((err) => console.log(err));
+    }
+  }, [fetchSavedFigures]);
 
   const openModal = (modal) => {
     setActiveModal(modal);

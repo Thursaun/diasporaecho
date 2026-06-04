@@ -2,9 +2,62 @@ const Figure = require("../models/figure");
 const User = require("../models/user");
 const { ERROR_MESSAGES } = require("../config/constants");
 const NotFoundError = require("../utils/errors/NotFoundError");
-const UnauthorizedError = require("../utils/errors/UnauthorizedError");
 const FeaturedFiguresService = require("../services/featuredFiguresService");
 const { cacheService, CACHE_TTL } = require("../services/cacheService");
+
+/**
+ * Programmatically infer historical era based on active years
+ */
+const determineEra = (years) => {
+  if (!years || typeof years !== 'string') return "Unknown Era";
+  
+  // Extract first 4-digit number as the start year
+  const match = years.match(/\b\d{4}\b/);
+  if (!match) return "Unknown Era";
+  
+  const year = parseInt(match[0], 10);
+  
+  if (year < 1865) {
+    return "Slavery & Abolition Era";
+  } else if (year >= 1865 && year <= 1877) {
+    return "Reconstruction Era";
+  } else if (year > 1877 && year <= 1915) {
+    return "Jim Crow & Early Activism";
+  } else if (year > 1915 && year <= 1940) {
+    return "Harlem Renaissance & New Negro";
+  } else if (year > 1940 && year <= 1968) {
+    return "Civil Rights Movement";
+  } else {
+    return "Post-Civil Rights & Modern Era";
+  }
+};
+
+/**
+ * Extract or generate a short legacy statement ("why they are in the annals of history")
+ */
+const extractLegacy = (figure) => {
+  if (figure.legacy) return figure.legacy;
+  
+  // If achievements are available, combine them
+  if (figure.contributions && figure.contributions.length > 0) {
+    return figure.contributions[0];
+  }
+  
+  if (figure.description) {
+    // Take the first sentence of the description
+    const sentences = figure.description.split(/(?<=[.!?])\s+/);
+    if (sentences.length > 0) {
+      const firstSentence = sentences[0].trim();
+      // If it's too long, truncate it
+      if (firstSentence.length > 200) {
+        return firstSentence.substring(0, 197) + "...";
+      }
+      return firstSentence;
+    }
+  }
+  
+  return "Renowned contributor to culture, history, and society.";
+};
 
 // PERFORMANCE: Optimized getFigures with caching
 const getFigures = async (req, res, next) => {
@@ -163,9 +216,12 @@ const getFigureByWikipediaId = async (req, res, next) => {
       likes: 0,
       likedBy: [],
       categories: ["Scholars & Educators"],
+      category: "Scholars & Educators",
       occupation: [],
       owners: [],
       status: 'pending', // New figures require admin approval before appearing in Echoes
+      era: determineEra(years),
+      legacy: extractLegacy({ description: page.extract || "" }),
     });
 
     try {
@@ -195,7 +251,9 @@ const getFigureByWikipediaId = async (req, res, next) => {
         likes: 0,
         likedBy: [],
         categories: ["Scholars & Educators"],
-        _source: "wikipedia"
+        _source: "wikipedia",
+        era: determineEra(years),
+        legacy: extractLegacy({ description: page.extract || "" }),
       });
     }
 
@@ -278,6 +336,7 @@ const saveFigure = (req, res, next) => {
           description: figureData.description || "",
           imageUrl: figureData.imageUrl || figureData.image || "",
           years: figureData.years || "",
+          category: sanitizedCategories[0],
           categories: sanitizedCategories,
           tags: figureData.tags || [],
           source: figureData.source || "Wikipedia",
@@ -296,6 +355,8 @@ const saveFigure = (req, res, next) => {
           education: figureData.education || [],
           notableWorks: figureData.notableWorks || [],
           movement: figureData.movement || [],
+          era: figureData.era || determineEra(figureData.years || ""),
+          legacy: figureData.legacy || extractLegacy(figureData),
         });
 
         console.log("New figure data:", JSON.stringify(newFigure.toObject(), null, 2));
@@ -654,6 +715,8 @@ const ensureFigure = async (req, res, next) => {
       return res.status(200).json(figure);
     }
 
+    const ensureCategories = figureData.categories || (figureData.category ? [figureData.category] : ['Scholars & Educators']);
+
     // Create new figure - PENDING approval
     figure = new Figure({
       wikipediaId: wikipediaId,
@@ -665,7 +728,8 @@ const ensureFigure = async (req, res, next) => {
       sourceUrl: figureData.sourceUrl || '',
       tags: figureData.tags || [],
       occupation: figureData.occupation || [],
-      categories: figureData.categories || ['Scholars & Educators'],
+      category: ensureCategories[0],
+      categories: ensureCategories,
       owners: [],
       likes: 0,
       likedBy: [],
@@ -677,6 +741,8 @@ const ensureFigure = async (req, res, next) => {
       education: figureData.education || [],
       notableWorks: figureData.notableWorks || [],
       movement: figureData.movement || [],
+      era: figureData.era || determineEra(figureData.years || ""),
+      legacy: figureData.legacy || extractLegacy(figureData),
     });
 
     await figure.save();

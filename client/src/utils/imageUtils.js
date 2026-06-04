@@ -10,7 +10,7 @@
  * @param {number} size - Desired width in pixels
  * @returns {string} - Optimized URL or original if not Wikipedia
  */
-export const getOptimizedImageUrl = (url, size = 300) => {
+export const getOptimizedImageUrl = (url, size = 330) => {
   if (!url) return '';
 
   // Skip placeholder images
@@ -21,14 +21,16 @@ export const getOptimizedImageUrl = (url, size = 300) => {
   // Thumb: https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Filename.ext/300px-Filename.ext
 
   try {
-    // Decode URL to handle encoded characters correctly in regex
-    const decodedUrl = decodeURIComponent(url);
+    // Snapping size to nearest standard Wikipedia size to prevent 400 Bad Request
+    const parsedSize = parseInt(size, 10) || 330;
+    const standardSizes = [120, 250, 330, 500, 960, 1280, 1920];
+    const snappedSize = standardSizes.find(s => s >= parsedSize) || 1920;
 
     // CASE 1: It's an existing thumbnail -> Resize it
     if (url.includes('/thumb/')) {
       // Regex to match the size part at the end (e.g., /300px-Filename.ext)
       // We replace "300px" with our desired size
-      return url.replace(/\/(\d+)px-/, `/${size}px-`);
+      return url.replace(/\/(\d+)px-/, `/${snappedSize}px-`);
     }
 
     // CASE 2: It's an original image -> Create thumbnail URL
@@ -44,7 +46,7 @@ export const getOptimizedImageUrl = (url, size = 300) => {
       // Structure: /wikipedia/<lang>/thumb/<shard>/<shard>/<filename>/<size>px-<filename>
 
       const filename = pathParts[pathParts.length - 1];
-      const newPath = `wikipedia/${pathParts[0]}/thumb/${pathParts.slice(1).join('/')}/${size}px-${filename}`;
+      const newPath = `wikipedia/${pathParts[0]}/thumb/${pathParts.slice(1).join('/')}/${snappedSize}px-${filename}`;
 
       return `${parts[0]}/${newPath}`;
     }

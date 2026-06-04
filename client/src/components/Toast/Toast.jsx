@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 /**
  * Toast notification component for displaying temporary messages
@@ -21,14 +21,14 @@ function Toast({ message, type = 'info', onClose, duration = 5000 }) {
       clearTimeout(showTimer);
       clearTimeout(hideTimer);
     };
-  }, [duration]);
+  }, [duration, handleClose]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setIsExiting(true);
     setTimeout(() => {
       onClose?.();
     }, 300); // Match animation duration
-  };
+  }, [onClose]);
 
   // Theme-matched styles for different toast types
   const typeStyles = {

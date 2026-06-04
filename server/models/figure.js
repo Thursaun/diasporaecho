@@ -90,6 +90,10 @@ const FigureSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  category: {
+    type: String,
+    default: "Scholars & Educators",
+  },
   // Multi-category support: figures can belong to multiple categories
   categories: {
     type: [String],
@@ -176,6 +180,15 @@ const FigureSchema = new mongoose.Schema({
   ethnicGroup: {
     type: [String],  // From Wikidata P172
     default: [],
+  },
+  era: {
+    type: String,
+    default: null,
+    index: true,
+  },
+  legacy: {
+    type: String,
+    default: null,
   },
 });
 

@@ -16,7 +16,7 @@ function PerformanceMonitor() {
 
   useEffect(() => {
     // Only show in development mode
-    if (process.env.NODE_ENV !== 'development') return;
+    if (!import.meta.env.DEV) return;
 
     // Get performance metrics
     const updateMetrics = async () => {
@@ -48,7 +48,7 @@ function PerformanceMonitor() {
     return () => clearInterval(interval);
   }, []);
 
-  if (process.env.NODE_ENV !== 'development') return null;
+  if (!import.meta.env.DEV) return null;
 
   return (
     <div className="fixed bottom-4 right-4 z-50">

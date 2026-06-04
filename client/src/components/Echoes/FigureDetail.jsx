@@ -6,6 +6,45 @@ import CurrentUserContext from "../../contexts/CurrentUserContext";
 // PERFORMANCE: Simple client-side cache for figure data
 const figureCache = new Map();
 
+const determineClientEra = (years) => {
+  if (!years || typeof years !== 'string') return "Unknown Era";
+  const match = years.match(/\b\d{4}\b/);
+  if (!match) return "Unknown Era";
+  const year = parseInt(match[0], 10);
+  
+  if (year < 1865) return "Slavery & Abolition Era";
+  if (year >= 1865 && year <= 1877) return "Reconstruction Era";
+  if (year > 1877 && year <= 1915) return "Jim Crow & Early Activism";
+  if (year > 1915 && year <= 1940) return "Harlem Renaissance & New Negro";
+  if (year > 1940 && year <= 1968) return "Civil Rights Movement";
+  return "Post-Civil Rights & Modern Era";
+};
+
+
+
+const eraDescriptions = {
+  "Slavery & Abolition Era": "The period marked by the struggle against chattel slavery, the Underground Railroad, and the rise of early abolitionist leaders.",
+  "Reconstruction Era": "The post-Civil War period of rebuilding, Black political empowerment, and attempts to secure civil rights for formerly enslaved people.",
+  "Jim Crow & Early Activism": "The era defining the rise of state-sponsored segregation, racial terror, and the heroic foundation of early civil rights organizations.",
+  "Harlem Renaissance & New Negro": "A profound cultural, artistic, and social explosion centered in Harlem, celebrating Black identity and intellectual achievements.",
+  "Civil Rights Movement": "The mid-20th century mass movement characterized by boycotts, marches, and landmark legislation to dismantle segregation and secure voting rights.",
+  "Post-Civil Rights & Modern Era": "The ongoing era of expanding representation, cultural influence, and modern struggles for systemic equity and justice."
+};
+
+const getLegacyText = (figure) => {
+  if (!figure) return "";
+  if (figure.legacy) return figure.legacy;
+  if (figure.contributions && figure.contributions.length > 0) return figure.contributions[0];
+  if (figure.description) {
+    const sentences = figure.description.split(/(?<=[.!?])\s+/);
+    if (sentences.length > 0) {
+      const firstSentence = sentences[0].trim();
+      return firstSentence.length > 200 ? firstSentence.substring(0, 197) + "..." : firstSentence;
+    }
+  }
+  return "Renowned contributor to culture, history, and society.";
+};
+
 function FigureDetail({
   onSaveFigureClick,
   onLikeFigureClick,
@@ -223,8 +262,13 @@ function FigureDetail({
         awards = [],
         education = [],
         notableWorks = [],
-        movement = []
+        movement = [],
+        era = null,
+        legacy = null
     } = currentFigure;
+
+    const displayEra = era || determineClientEra(years);
+    const displayLegacy = legacy || getLegacyText(currentFigure);
 
     console.log("Rendering FigureDetail with likes:", likes, typeof likes);
 
@@ -374,6 +418,21 @@ function FigureDetail({
                                             </div>
                                         )}
 
+                                        {displayEra && displayEra !== "Unknown Era" && (
+                                            <div className="border-b border-gray-200 pb-4 bg-gold/5 p-4 rounded-xl border border-gold/35 my-3">
+                                                <dt className="text-xs font-bold text-gold uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                                                    <svg className="w-4 h-4 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                    Historical Era
+                                                </dt>
+                                                <dd className="text-sm sm:text-base font-extrabold text-gray-900 mb-1 leading-snug">{displayEra}</dd>
+                                                <p className="text-[11px] text-gray-600 leading-relaxed mb-0">
+                                                    {eraDescriptions[displayEra] || "A significant period in history marked by key societal and cultural developments."}
+                                                </p>
+                                            </div>
+                                        )}
+
                                         {occupation && occupation.length > 0 && (
                                             <div className="border-b border-gray-200 pb-4">
                                                 <dt className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-2">
@@ -493,6 +552,19 @@ function FigureDetail({
                         <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
                             <div className="p-6 sm:p-8 lg:p-10">
                                 <article className="prose prose-sm sm:prose-base lg:prose-lg max-w-none">
+                                    {displayLegacy && (
+                                        <div className="relative overflow-hidden bg-gradient-to-br from-amber-500/5 to-gold/5 border-l-4 border-gold p-5 sm:p-6 rounded-r-xl shadow-sm mb-8">
+                                            <div className="absolute top-2 right-2 opacity-5 pointer-events-none">
+                                                <svg className="w-16 h-16 text-gold" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
+                                                </svg>
+                                            </div>
+                                            <span className="block text-[10px] font-extrabold text-gold uppercase tracking-widest mb-1.5">Place in the Annals of History</span>
+                                            <p className="text-sm sm:text-base md:text-lg font-medium text-gray-800 italic leading-relaxed relative z-10 mb-0">
+                                                &ldquo;{displayLegacy}&rdquo;
+                                            </p>
+                                        </div>
+                                    )}
                                     <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-bold text-gray-900 mb-6 pb-4 border-b-2 border-secondary">
                                         <svg className="w-6 h-6 sm:w-8 sm:h-8 text-secondary" fill="currentColor" viewBox="0 0 20 20">
                                             <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
