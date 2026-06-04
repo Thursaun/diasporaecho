@@ -3,6 +3,12 @@ const mongoose = require('mongoose');
 const helmet = require('helmet');
 const cors = require('cors');
 const compression = require('compression'); // Import compression
+const dns = require('dns');
+
+// Fix Render/Node 17+ DNS resolution bug for Mongoose Atlas SRV records
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 const { errors } = require('celebrate');
 const { requestLogger, errorLogger } = require('./middlewares/logger');
 const limiter = require('./middlewares/rateLimiter');
