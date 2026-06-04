@@ -3,6 +3,7 @@ require("dotenv").config();
 const Figure = require("../models/figure");
 const checkDupes = require("../helper/checkDupes");
 const { cacheService, CACHE_TTL } = require("./cacheService");
+const { extractYearsFromExtract } = require("../helper/yearExtractor");
 
 const API_BASE_URL = "https://en.wikipedia.org/w/api.php";
 
@@ -400,47 +401,7 @@ const extractLegacy = (figure) => {
   return "Renowned contributor to culture, history, and society.";
 };
 
-// HELPER: Extract years from description extract
-const extractYearsFromExtract = (extract) => {
-  if (!extract) return "Unknown";
-  
-  const cleanText = extract.replace(/\s+/g, ' ').replace(/[–—]/g, '-').trim();
-
-  // Pattern 1: Look for "Month Day, Year - Month Day, Year"
-  const fullDateMatch = cleanText.match(/([A-Z][a-z]+ \d{1,2}, \d{4})\s*[-–—]\s*([A-Z][a-z]+ \d{1,2}, \d{4})/);
-  if (fullDateMatch) {
-    const birthYear = fullDateMatch[1].match(/\d{4}/)?.[0];
-    const deathYear = fullDateMatch[2].match(/\d{4}/)?.[0];
-    if (birthYear && deathYear) {
-      return `${birthYear} - ${deathYear}`;
-    }
-  }
-
-  // Pattern 2: Look for year ranges like "1933-2003"
-  const yearRangeMatch = cleanText.match(/\b(\d{4})\s*[-–—]\s*(\d{4})\b/);
-  if (yearRangeMatch) {
-    return `${yearRangeMatch[1]} - ${yearRangeMatch[2]}`;
-  }
-
-  // Pattern 3: Birth year with "born" keyword
-  const bornMatch = cleanText.match(/born[^)]*(\d{4})/i);
-  if (bornMatch) {
-    const deathMatch = cleanText.match(/died[^)]*(\d{4})|(\d{4})\s*[-–—]\s*(\d{4})/i);
-    if (deathMatch) {
-      return deathMatch[3] ? `${deathMatch[2]} - ${deathMatch[3]}` : `${bornMatch[1]} - ${deathMatch[1]}`;
-    } else {
-      return `${bornMatch[1]} - Present`;
-    }
-  }
-
-  // Pattern 4: Simple year range in parentheses
-  const simpleRange = cleanText.match(/\((?:c\.\s*)?(\d{4})\s*[-–—]\s*(\d{4})\)/);
-  if (simpleRange) {
-    return `${simpleRange[1]} - ${simpleRange[2]}`;
-  }
-
-  return "Unknown";
-};
+// HELPER: Shared year extraction function is imported at the top of the file
 
 // PERFORMANCE: Optimized single-query Wikipedia search
 async function fastWikipediaSearch(searchTerm, limit) {

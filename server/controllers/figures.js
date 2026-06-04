@@ -4,6 +4,7 @@ const { ERROR_MESSAGES } = require("../config/constants");
 const NotFoundError = require("../utils/errors/NotFoundError");
 const FeaturedFiguresService = require("../services/featuredFiguresService");
 const { cacheService, CACHE_TTL } = require("../services/cacheService");
+const { extractYearsFromExtract } = require("../helper/yearExtractor");
 
 /**
  * Programmatically infer historical era based on active years
@@ -167,38 +168,9 @@ const getFigureByWikipediaId = async (req, res, next) => {
       throw new NotFoundError(ERROR_MESSAGES.FIGURE_NOT_FOUND);
     }
 
-    // Extract years from description - look for actual date patterns, not pronunciation
-    let years = "Unknown";
+    // Extract years from description - using shared robust helper
     const extract = page.extract || "";
-
-    // Pattern 1: Look for "Month Day, Year – Month Day, Year" or similar
-    const fullDateMatch = extract.match(/([A-Z][a-z]+ \d{1,2}, \d{4})\s*[–—-]\s*([A-Z][a-z]+ \d{1,2}, \d{4})/);
-    if (fullDateMatch) {
-      // Extract just years from full dates
-      const birthYear = fullDateMatch[1].match(/\d{4}/)?.[0];
-      const deathYear = fullDateMatch[2].match(/\d{4}/)?.[0];
-      if (birthYear && deathYear) {
-        years = `${birthYear} - ${deathYear}`;
-      }
-    } else {
-      // Pattern 2: Look for "born YEAR" or just year ranges like "1933–2003"
-      const yearRangeMatch = extract.match(/\b(\d{4})\s*[–—-]\s*(\d{4})\b/);
-      if (yearRangeMatch) {
-        years = `${yearRangeMatch[1]} - ${yearRangeMatch[2]}`;
-      } else {
-        // Pattern 3: Just birth year with "born" keyword
-        const bornMatch = extract.match(/born[^)]*(\d{4})/i);
-        if (bornMatch) {
-          // Check if person might be living (no death year found)
-          const deathMatch = extract.match(/died[^)]*(\d{4})|(\d{4})\s*[–—-]\s*(\d{4})/i);
-          if (deathMatch) {
-            years = deathMatch[3] ? `${deathMatch[2]} - ${deathMatch[3]}` : `${bornMatch[1]} - ${deathMatch[1]}`;
-          } else {
-            years = `${bornMatch[1]} - Present`;
-          }
-        }
-      }
-    }
+    const years = extractYearsFromExtract(extract);
 
     // AUTO-SAVE: Create new figure in database for future interactions
     console.log(`💾 Auto-saving ${page.title} to database...`);
