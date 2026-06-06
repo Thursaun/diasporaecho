@@ -36,10 +36,54 @@ const getLegacyText = (figure) => {
   if (figure.legacy) return figure.legacy;
   if (figure.contributions && figure.contributions.length > 0) return figure.contributions[0];
   if (figure.description) {
-    const sentences = figure.description.split(/(?<=[.!?])\s+/);
+    const sentences = figure.description
+      .split(/(?<=[.!?])\s+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 20);
+
+    const keywords = [
+      "known for", 
+      "famous for", 
+      "best known", 
+      "pioneered", 
+      "founded", 
+      "established", 
+      "championed", 
+      "advocated", 
+      "fought for", 
+      "credited with", 
+      "remembered for",
+      "instrumental in",
+      "key figure",
+      "leader in",
+      "became the first",
+      "noted for",
+      "renowned for",
+      "acclaimed",
+      "celebrated",
+      "popularized",
+      "escaped",
+      "spokesman",
+      "spokesperson"
+    ];
+
+    // Find the first sentence that contains one of the keywords
+    const matchingSentence = sentences.find(s => {
+      const lower = s.toLowerCase();
+      return keywords.some(kw => lower.includes(kw));
+    });
+
+    if (matchingSentence) {
+      return matchingSentence.length > 200 
+        ? matchingSentence.substring(0, 197) + "..." 
+        : matchingSentence;
+    }
+
     if (sentences.length > 0) {
-      const firstSentence = sentences[0].trim();
-      return firstSentence.length > 200 ? firstSentence.substring(0, 197) + "..." : firstSentence;
+      const firstSentence = sentences[0];
+      return firstSentence.length > 200 
+        ? firstSentence.substring(0, 197) + "..." 
+        : firstSentence;
     }
   }
   return "Renowned contributor to culture, history, and society.";

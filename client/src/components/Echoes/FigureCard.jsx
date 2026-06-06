@@ -36,10 +36,54 @@ const getLegacyText = (figure) => {
   if (figure.legacy) return figure.legacy;
   if (figure.contributions && figure.contributions.length > 0) return figure.contributions[0];
   if (figure.description) {
-    const sentences = figure.description.split(/(?<=[.!?])\s+/);
+    const sentences = figure.description
+      .split(/(?<=[.!?])\s+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 20);
+
+    const keywords = [
+      "known for", 
+      "famous for", 
+      "best known", 
+      "pioneered", 
+      "founded", 
+      "established", 
+      "championed", 
+      "advocated", 
+      "fought for", 
+      "credited with", 
+      "remembered for",
+      "instrumental in",
+      "key figure",
+      "leader in",
+      "became the first",
+      "noted for",
+      "renowned for",
+      "acclaimed",
+      "celebrated",
+      "popularized",
+      "escaped",
+      "spokesman",
+      "spokesperson"
+    ];
+
+    // Find the first sentence that contains one of the keywords
+    const matchingSentence = sentences.find(s => {
+      const lower = s.toLowerCase();
+      return keywords.some(kw => lower.includes(kw));
+    });
+
+    if (matchingSentence) {
+      return matchingSentence.length > 180 
+        ? matchingSentence.substring(0, 177) + "..." 
+        : matchingSentence;
+    }
+
     if (sentences.length > 0) {
-      const firstSentence = sentences[0].trim();
-      return firstSentence.length > 150 ? firstSentence.substring(0, 147) + "..." : firstSentence;
+      const firstSentence = sentences[0];
+      return firstSentence.length > 150 
+        ? firstSentence.substring(0, 147) + "..." 
+        : firstSentence;
     }
   }
   return "Renowned contributor to culture, history, and society.";
@@ -122,6 +166,8 @@ const FigureCard = memo(function FigureCard({
     notableWorks = [],
     movement = [],
     birthPlace = null,
+    deathPlace = null,
+    education = [],
     era = null,
     legacy = null,
   } = figure || {};
@@ -401,7 +447,7 @@ const FigureCard = memo(function FigureCard({
           </div>
  
           {/* Achievements & Legacy List */}
-          <div className="relative z-10 mt-2 overflow-y-auto flex-1 flex flex-col justify-center gap-2 max-h-[60%]">
+          <div className="relative z-10 mt-2 overflow-y-auto flex-1 flex flex-col gap-2">
             {/* Annals of History / Why they are remembered */}
             <div className="border-t border-b border-gold/20 py-2.5 my-1">
               <span className="block text-[10px] font-bold text-gold uppercase tracking-widest text-center mb-1">Annals of History</span>
@@ -413,8 +459,17 @@ const FigureCard = memo(function FigureCard({
             <div className="w-full mt-1.5 flex flex-col gap-2">
               {(() => {
                 const items = [];
-                const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1);
+                const capitalize = (str) => {
+                  if (!str || typeof str !== 'string') return '';
+                  return str.charAt(0).toUpperCase() + str.slice(1);
+                };
 
+                if (occupation && occupation.length > 0) {
+                  items.push({ label: 'Occupation', val: occupation.slice(0, 2).map(capitalize).join(', '), icon: '💼' });
+                }
+                if (education && education.length > 0) {
+                  items.push({ label: 'Education', val: capitalize(education[0]), icon: '🎓' });
+                }
                 if (awards && awards.length > 0) {
                   items.push({ label: 'Award', val: capitalize(awards[0]), icon: '🏆' });
                 }
@@ -430,18 +485,23 @@ const FigureCard = memo(function FigureCard({
                 if (birthPlace) {
                   items.push({ label: 'Born', val: capitalize(birthPlace), icon: '📍' });
                 }
+                if (deathPlace) {
+                  items.push({ label: 'Died', val: capitalize(deathPlace), icon: '🪦' });
+                }
 
-                // If we have at least 2 structured items, render them as a sleek grid!
+                // If we have at least 2 structured items, render them as a sleek list!
                 if (items.length >= 2) {
                   return (
-                    <div className="grid grid-cols-2 gap-2 text-left">
-                      {items.slice(0, 4).map((item, i) => (
-                        <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-2.5 flex items-start gap-2 backdrop-blur-sm hover:bg-white/10 transition-colors">
-                          <span className="text-base leading-none mt-0.5">{item.icon}</span>
-                          <div className="flex-1 min-w-0">
-                            <span className="block text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">{item.label}</span>
-                            <span className="block text-[10px] sm:text-xs font-semibold text-white truncate" title={item.val}>{item.val}</span>
+                    <div className="flex flex-col gap-1.5 w-full text-left">
+                      {items.map((item, i) => (
+                        <div key={i} className="bg-white/5 border border-white/10 rounded-lg py-1.5 px-3 flex items-center justify-between gap-3 backdrop-blur-sm hover:bg-white/10 transition-colors">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-sm leading-none flex-shrink-0">{item.icon}</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">{item.label}</span>
                           </div>
+                          <span className="text-[11px] sm:text-xs font-semibold text-white truncate text-right max-w-[65%]" title={item.val}>
+                            {item.val}
+                          </span>
                         </div>
                       ))}
                     </div>
