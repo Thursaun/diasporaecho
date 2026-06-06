@@ -340,46 +340,60 @@ const getFeaturedFigures = async () => {
   try {
     performanceTracker.start('getFeaturedFigures');
 
-    // 1. Fresh localStorage cache → return instantly
     const cachedData = localStorage.getItem(STORAGE_KEY);
     const cachedTimestamp = parseInt(localStorage.getItem(STORAGE_TIMESTAMP_KEY) || '0');
     const isStale = Date.now() - cachedTimestamp > STALE_THRESHOLD;
 
-    if (cachedData && !isStale) {
+    // 1. If we have cached data, return it immediately to avoid blocking the user interface
+    if (cachedData) {
       const figures = JSON.parse(cachedData);
+      
+      // If the cache is stale, trigger a background refresh (non-blocking)
+      if (isStale) {
+        console.log('⚡ Stale cache found, refreshing featured figures in background...');
+        
+        // Use the prefetched promise if available, otherwise hit the network directly
+        let refreshPromise;
+        if (window.__prefetchedFeatured) {
+          refreshPromise = window.__prefetchedFeatured;
+          window.__prefetchedFeatured = null;
+        } else {
+          refreshPromise = fetchWithTimeout(`${BASE_URL}/figures/featured`, {}, 10000, 1, 'FEATURED');
+        }
+        
+        refreshPromise
+          .then(fresh => {
+            if (Array.isArray(fresh) && fresh.length > 0) {
+              console.log('⚡ Background refresh successful, updated cached featured figures');
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
+              localStorage.setItem(STORAGE_TIMESTAMP_KEY, Date.now().toString());
+            }
+          })
+          .catch(err => console.warn('⚠️ Background refresh of featured figures failed:', err));
+      }
+      
       performanceTracker.end('getFeaturedFigures');
       return figures;
     }
 
-    // 2. Try the prefetch promise (started in index.html before React loaded)
+    // 2. No cache at all: we must wait for either the prefetch promise or the direct network request
     let data = null;
     if (window.__prefetchedFeatured) {
       try {
-        data = await window.__prefetchedFeatured;
-      } catch {
+        // Race the prefetch promise against a 1.2-second timeout to prevent stalling
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Prefetch timeout')), 1200)
+        );
+        data = await Promise.race([window.__prefetchedFeatured, timeoutPromise]);
+      } catch (err) {
+        console.warn('⚠️ Prefetched featured figures timed out or failed:', err.message);
         data = null;
       }
       window.__prefetchedFeatured = null; // Consume once
     }
 
-    // 3. If prefetch failed or empty, try network directly
+    // 3. If prefetch was not available or failed, fetch directly from network (blocking)
     if (!Array.isArray(data) || data.length === 0) {
-      // If we have stale cache, return it immediately and refresh in background
-      if (cachedData) {
-        const stale = JSON.parse(cachedData);
-        fetchWithTimeout(`${BASE_URL}/figures/featured`, {}, 10000, 1, 'FEATURED')
-          .then(fresh => {
-            if (Array.isArray(fresh) && fresh.length > 0) {
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
-              localStorage.setItem(STORAGE_TIMESTAMP_KEY, Date.now().toString());
-            }
-          })
-          .catch(() => {});
-        performanceTracker.end('getFeaturedFigures');
-        return stale;
-      }
-
-      // No cache at all — must wait for network
       data = await fetchWithTimeout(`${BASE_URL}/figures/featured`, {}, 10000, 1, 'FEATURED');
     }
 

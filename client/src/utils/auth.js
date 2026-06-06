@@ -54,3 +54,19 @@ export const checkToken = (token) => {
         return Promise.reject(`Error: ${res.status}`);
     });
 };
+
+export const googleLogin = (token) => {
+    return fetch(`${BASE_URL}/google-signin`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ token })
+    })
+    .then(res => {
+        if (res.ok) {
+            return res.json();
+        }
+        return Promise.reject(`Error: ${res.status}`);
+    });
+};

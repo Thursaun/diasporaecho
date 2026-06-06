@@ -90,10 +90,12 @@ function ModalWithForm({
         </button>
 
         {/* MODERN: Title with decorative line */}
-        <div className="mb-6">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">{title}</h2>
-          <div className="h-1 w-16 bg-gradient-to-r from-secondary to-secondary/50 rounded-full"></div>
-        </div>
+        {title && (
+          <div className="mb-6">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">{title}</h2>
+            <div className="h-1 w-16 bg-gradient-to-r from-secondary to-secondary/50 rounded-full"></div>
+          </div>
+        )}
 
         <form
           className="space-y-4"

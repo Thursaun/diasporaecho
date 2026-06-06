@@ -23,8 +23,15 @@ const validateSignin = celebrate({
     }),
 });
 
+const validateGoogleSignin = celebrate({
+    body: Joi.object().keys({
+        token: Joi.string().required(),
+    }),
+});
+
 module.exports = {
     validateSignUp,
     validateSignin,
+    validateGoogleSignin,
     validateURL,
 };

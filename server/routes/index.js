@@ -1,9 +1,9 @@
 const router = require('express').Router();
 const userRoutes = require('./users');
 const figureRoutes = require('./figures');
-const { login, createUser } = require('../controllers/users');
+const { login, createUser, googleSignIn } = require('../controllers/users');
 const auth = require('../middlewares/auth');
-const {validateSignUp, validateSignin} = require('../middlewares/validation');
+const {validateSignUp, validateSignin, validateGoogleSignin} = require('../middlewares/validation');
 const NotFoundError = require('../utils/errors/NotFoundError');
 const { ERROR_MESSAGES } = require('../config/constants');
 const { search } = require('../services/WikiService');
@@ -11,6 +11,7 @@ const { search } = require('../services/WikiService');
 // Public routes
 router.post('/signin', validateSignin, login);
 router.post('/signup', validateSignUp, createUser);
+router.post('/google-signin', validateGoogleSignin, googleSignIn);
 router.get('/search', search);
 
 // Protected routes

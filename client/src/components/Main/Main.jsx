@@ -308,18 +308,18 @@ function Main({ onSaveFigureClick, onLikeFigureClick, savedFigures, onLoginClick
                       isSaved={checkIsSaved(figure)}
                       isLiked={checkIsLiked(figure)}
                       priority={true}
-                      badge={!searchQuery && index < 3 ? (
-                        <div className={`px-3 py-1 rounded-full text-white text-xs font-bold shadow-lg ${
-                          index === 0 ? 'bg-yellow-500' :
-                          index === 1 ? 'bg-gray-400' :
-                          'bg-orange-500'
-                        }`}>
-                          {index === 0 ? '🥇 Most Liked' :
-                           index === 1 ? '🥈 Popular' :
-                           '🥉 Featured'}
-                        </div>
-                      ) : null}
                     />
+                    {!searchQuery && index < 3 && (
+                      <div className={`absolute -top-3.5 left-1/2 -translate-x-1/2 z-30 px-4 py-1 rounded-md text-[10px] sm:text-xs font-bold shadow-md tracking-wider uppercase flex items-center gap-1.5 pointer-events-none border whitespace-nowrap transition-all duration-300 ${
+                        index === 0 ? 'bg-gradient-to-r from-gold via-amber-300 to-gold text-secondary border-gold/30 shadow-[0_4px_12px_rgba(232,172,73,0.25)]' :
+                        index === 1 ? 'bg-gradient-to-r from-[#802621] via-[#632420] to-[#802621] text-white border-white/10 shadow-[0_4px_12px_rgba(99,36,32,0.25)]' :
+                        'bg-gradient-to-r from-[#328e76] via-[#28715E] to-[#328e76] text-white border-white/10 shadow-[0_4px_12px_rgba(40,113,94,0.25)]'
+                      }`}>
+                        {index === 0 ? '🥇 Most Liked' :
+                         index === 1 ? '🥈 Popular' :
+                         '🥉 Featured'}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

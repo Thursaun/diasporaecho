@@ -72,9 +72,52 @@ const getSavedFigures = (req, res, next) => {
         .catch(next);
 };
 
+const googleSignIn = (req, res, next) => {
+    const { token } = req.body;
+
+    fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`)
+        .then((response) => {
+            if (!response.ok) {
+                throw new BadRequestError("Invalid Google ID token");
+            }
+            return response.json();
+        })
+        .then((payload) => {
+            const { email, name } = payload;
+            
+            if (!email) {
+                throw new BadRequestError("Email not returned by Google");
+            }
+
+            // Find user by email
+            return User.findOne({ email }).then((user) => {
+                if (user) {
+                    return user;
+                }
+                
+                // Create user if not exists
+                // Generate a random password since they sign in with Google
+                return bcrypt.hash(Math.random().toString(36).slice(-10), 10)
+                    .then((hashedPassword) => {
+                        return User.create({
+                            name: name || email.split('@')[0],
+                            email,
+                            password: hashedPassword,
+                        });
+                    });
+            });
+        })
+        .then((user) => {
+            const jwtToken = jwt.sign({ _id: user._id }, JWT_SECRET, { expiresIn: JWT_EXPIRE });
+            res.status(200).send({ token: jwtToken });
+        })
+        .catch(next);
+};
+
 module.exports = {
     getCurrentUser,
     createUser,
     login,
     getSavedFigures,
+    googleSignIn,
 };

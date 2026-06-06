@@ -56,6 +56,43 @@ const getLegacyText = (figure) => {
   return "Renowned contributor to culture, history, and society.";
 };
 
+const getSanitizedFlashcardText = (figure) => {
+  const text = getLegacyText(figure);
+  if (!text || !figure || !figure.name) return text;
+
+  const name = figure.name.trim();
+  const titleAndShortRegex = /^(dr|mr|mrs|ms|jr|sr|iii|ii|i)\.?$/i;
+  const nameParts = name
+    .split(/[\s\-]+/)
+    .map(part => part.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").trim())
+    .filter(part => part.length > 2 && !titleAndShortRegex.test(part));
+
+  let sanitized = text;
+  const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  // Replace possessive full name first
+  const escapedFullName = escapeRegExp(name);
+  const possessiveFullNameRegex = new RegExp(`\\b${escapedFullName}'s\\b`, 'gi');
+  sanitized = sanitized.replace(possessiveFullNameRegex, "[This Figure]'s");
+
+  // Replace full name
+  const fullNameRegex = new RegExp(`\\b${escapedFullName}\\b`, 'gi');
+  sanitized = sanitized.replace(fullNameRegex, '[This Figure]');
+
+  // Replace each name part
+  nameParts.sort((a, b) => b.length - a.length);
+  nameParts.forEach(part => {
+    const escapedPart = escapeRegExp(part);
+    const possessivePartRegex = new RegExp(`\\b${escapedPart}'s\\b`, 'gi');
+    sanitized = sanitized.replace(possessivePartRegex, "[This Figure]'s");
+    
+    const partRegex = new RegExp(`\\b${escapedPart}\\b`, 'gi');
+    sanitized = sanitized.replace(partRegex, '[This Figure]');
+  });
+
+  return sanitized;
+};
+
 const getStartYear = (yearsText) => {
   if (!yearsText || typeof yearsText !== 'string') return 9999;
   const match = yearsText.match(/\b\d{4}\b/);
@@ -569,7 +606,7 @@ function Profile({ onLikeFigureClick, onSaveFigureClick, onLoginClick, savedFigu
                             </div>
                             <span className="block text-[10px] font-extrabold text-gold uppercase tracking-widest">Annals of History Entry</span>
                             <p className="text-sm sm:text-base md:text-lg font-medium italic leading-relaxed text-gray-100 px-3 line-clamp-6">
-                              &ldquo;{getLegacyText(currentFlashcard)}&rdquo;
+                              &ldquo;{getSanitizedFlashcardText(currentFlashcard)}&rdquo;
                             </p>
                           </div>
 

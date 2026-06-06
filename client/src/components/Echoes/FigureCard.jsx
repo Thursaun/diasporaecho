@@ -279,7 +279,7 @@ const FigureCard = memo(function FigureCard({
           </div>
 
           {/* Badges & Like Button (Front) */}
-          <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 z-20 flex justify-between items-start pointer-events-none">
+          <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 z-20 flex justify-between items-center pointer-events-none opacity-0 -translate-y-4 transition-all duration-500 ease-out group-hover:opacity-100 group-hover:translate-y-0">
             <div className="flex flex-col gap-1.5 pointer-events-auto items-start max-w-[70%]">
               {displayEra && displayEra !== "Unknown Era" && (
                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold border shadow-md backdrop-blur-md ${getEraStyles(displayEra)}`}>
@@ -288,7 +288,6 @@ const FigureCard = memo(function FigureCard({
               )}
             </div>
             <div className="flex flex-col items-end gap-2 pointer-events-auto">
-               {badge && <div className="mb-0.5">{badge}</div>}
                {!hideInteractions && (
                  <button onClick={handleLikeClick} className={`flex flex-col items-center gap-1 transition-all duration-150 ${isLiked ? "scale-110" : "opacity-90 hover:scale-110"}`}>
                    <div className={`p-2.5 rounded-full shadow-lg border ${isLiked ? "bg-dark/60 backdrop-blur text-white border-white/20" : "bg-white/20 text-white border-white/20"}`}>

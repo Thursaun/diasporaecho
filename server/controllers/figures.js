@@ -258,6 +258,10 @@ const saveFigure = (req, res, next) => {
   let rawWikipediaId = figureData.wikipediaId ||
     `custom_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+  const hasWikiPrefix = rawWikipediaId.startsWith('wiki_');
+  const numericId = hasWikiPrefix ? rawWikipediaId.replace('wiki_', '') : rawWikipediaId;
+  const prefixedId = hasWikiPrefix ? rawWikipediaId : `wiki_${rawWikipediaId}`;
+
   // Always normalize to wiki_ prefix for consistency (data migrated to this format)
   const wikipediaId = rawWikipediaId.startsWith('wiki_') || rawWikipediaId.startsWith('custom_')
     ? rawWikipediaId
@@ -265,8 +269,12 @@ const saveFigure = (req, res, next) => {
 
   console.log("Using wikipediaId:", wikipediaId);
 
-  // Check if figure already exists (all data now uses wiki_ prefix)
-  Figure.findOne({ wikipediaId })
+  // Check if figure already exists (check both raw numeric and prefixed format)
+  const findQuery = wikipediaId.startsWith('custom_')
+    ? { wikipediaId }
+    : { $or: [{ wikipediaId: numericId }, { wikipediaId: prefixedId }] };
+
+  Figure.findOne(findQuery)
     .then((existingFigure) => {
       if (existingFigure) {
         console.log("Figure exists, adding user to owners");
@@ -427,44 +435,50 @@ const unsaveFigure = (req, res, next) => {
 
   console.log('Unsaving figure:', figureId, 'for user:', userId);
 
-  User.findByIdAndUpdate(
-    userId,
-    { $pull: { savedFigures: figureId } },
-    { new: true }
-  )
-    .then((user) => {
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
+  const findQuery = figureId.match(/^[0-9a-fA-F]{24}$/)
+    ? { _id: figureId }
+    : { wikipediaId: figureId };
+
+  Figure.findOne(findQuery)
+    .then((figure) => {
+      if (!figure) {
+        // If the figure doesn't exist, we can't get its ObjectId, but let's try to pull figureId from user just in case
+        return User.findByIdAndUpdate(
+          userId,
+          { $pull: { savedFigures: figureId } },
+          { new: true }
+        ).then(() => {
+          res.status(200).json({
+            message: 'Figure removed from saved list',
+            figureId: figureId
+          });
+        });
       }
 
-      console.log(`Figure ${figureId} removed from user ${userId}'s saved list`);
+      // We found the figure, so we have its actual _id (ObjectId)
+      const actualFigureId = figure._id;
 
-      const findQuery = figureId.match(/^[0-9a-fA-F]{24}$/)
-        ? { _id: figureId }
-        : { wikipediaId: figureId };
+      return User.findByIdAndUpdate(
+        userId,
+        { $pull: { savedFigures: actualFigureId } },
+        { new: true }
+      ).then((user) => {
+        if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+        }
 
-      return Figure.findOne(findQuery);
-    })
-    .then((figure) => {
-      if (figure) {
         figure.owners = figure.owners.filter(
           (ownerId) => ownerId.toString() !== userId.toString()
         );
 
         return figure.save().then(() => {
-          console.log(`User ${userId} removed from figure ${figureId}'s owners`);
+          console.log(`User ${userId} removed from figure ${figure._id}'s owners`);
           res.status(200).json({
             message: 'Figure unsaved successfully',
             figureId: figureId
           });
         });
-      } else {
-        console.log(`Figure ${figureId} not found, but removed from user's saved list`);
-        res.status(200).json({
-          message: 'Figure removed from saved list',
-          figureId: figureId
-        });
-      }
+      });
     })
     .catch((error) => {
       console.error('Error unsaving figure:', error);
@@ -674,13 +688,21 @@ const ensureFigure = async (req, res, next) => {
       return res.status(400).json({ message: 'wikipediaId is required' });
     }
 
+    const hasWikiPrefix = rawWikipediaId.startsWith('wiki_');
+    const numericId = hasWikiPrefix ? rawWikipediaId.replace('wiki_', '') : rawWikipediaId;
+    const prefixedId = hasWikiPrefix ? rawWikipediaId : `wiki_${rawWikipediaId}`;
+
     // Normalize to wiki_ prefix (single source of truth)
     const wikipediaId = rawWikipediaId.startsWith('wiki_') || rawWikipediaId.startsWith('custom_')
       ? rawWikipediaId
       : `wiki_${rawWikipediaId}`;
 
-    // Check if figure already exists (all data uses wiki_ prefix)
-    let figure = await Figure.findOne({ wikipediaId });
+    // Check if figure already exists (check both formats)
+    const findQuery = wikipediaId.startsWith('custom_')
+      ? { wikipediaId }
+      : { $or: [{ wikipediaId: numericId }, { wikipediaId: prefixedId }] };
+
+    let figure = await Figure.findOne(findQuery);
 
     if (figure) {
       console.log('✅ Figure already exists in DB:', figure.name, figure._id);

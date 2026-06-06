@@ -44,7 +44,11 @@
          After:  HTML → fetch + JS → React uses prefetched data (parallel) -->
     <script>
       (function() {
-        var API = window.location.hostname === 'localhost'
+        var isLocal = window.location.protocol === 'http:' ||
+                      window.location.hostname === 'localhost' ||
+                      window.location.hostname === '127.0.0.1' ||
+                      window.location.hostname === '[::1]';
+        var API = isLocal
           ? 'http://localhost:3001/api'
           : 'https://diasporaecho.onrender.com/api';
         // Start fetching featured figures immediately
@@ -54,6 +58,8 @@
           .catch(function() { return null; });
       })();
     </script>
+    <!-- Google Identity Services script for Google Sign-in -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
     <div id="root"></div>

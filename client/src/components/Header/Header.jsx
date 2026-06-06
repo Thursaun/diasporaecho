@@ -121,20 +121,12 @@ function Header({ loggedIn, onRegisterClick, onLoginClick, onSignOut }) {
                   </button>
                 </>
               ) : (
-                <div className="flex items-center gap-2 ml-2">
-                  <button
-                    onClick={onLoginClick}
-                    className="px-4 py-2 text-sm xl:text-base font-medium text-white/80 hover:text-white transition-colors duration-300"
-                  >
-                    Log In
-                  </button>
-                  <button
-                    onClick={onRegisterClick}
-                    className="px-5 py-2 text-sm xl:text-base font-semibold rounded-full bg-primary text-white hover:shadow-lg hover:shadow-primary/40 hover:scale-105 transition-all duration-300"
-                  >
-                    Sign Up
-                  </button>
-                </div>
+                <button
+                  onClick={onLoginClick}
+                  className="px-6 py-2 ml-2 text-sm xl:text-base font-semibold rounded-full bg-primary text-white hover:shadow-lg hover:shadow-primary/40 hover:scale-105 transition-all duration-300"
+                >
+                  Sign In / Sign Up
+                </button>
               )}
             </nav>
 
@@ -260,26 +252,15 @@ function Header({ loggedIn, onRegisterClick, onLoginClick, onSignOut }) {
                 Sign Out
               </button>
             ) : (
-              <div className="space-y-3">
-                <button
-                  onClick={() => {
-                    onLoginClick();
-                    closeMobileMenu();
-                  }}
-                  className="w-full py-4 rounded-2xl bg-white/10 text-white font-semibold hover:bg-white/20 transition-all duration-300"
-                >
-                  Log In
-                </button>
-                <button
-                  onClick={() => {
-                    onRegisterClick();
-                    closeMobileMenu();
-                  }}
-                  className="w-full py-4 rounded-2xl bg-primary text-white font-semibold hover:shadow-lg hover:shadow-primary/40 transition-all duration-300"
-                >
-                  Sign Up Free
-                </button>
-              </div>
+              <button
+                onClick={() => {
+                  onLoginClick();
+                  closeMobileMenu();
+                }}
+                className="w-full py-4 rounded-2xl bg-primary text-white font-semibold hover:shadow-lg hover:shadow-primary/40 transition-all duration-300"
+              >
+                Sign In / Sign Up
+              </button>
             )}
           </div>
         </nav>

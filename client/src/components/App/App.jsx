@@ -2,7 +2,6 @@ import { useEffect, useState, lazy, Suspense, useCallback } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import Header from "../Header/Header";
 import Login from "../ModalWithForms/Login";
-import Register from "../ModalWithForms/Register";
 import Loading from "../Loading/Loading";
 import Toast from "../Toast/Toast";
 
@@ -26,7 +25,7 @@ if (typeof window !== 'undefined') {
 }
 
 import CurrentUserContext from "../../contexts/CurrentUserContext";
-import { checkToken, login, register } from "../../utils/auth";
+import { checkToken, login, register, googleLogin } from "../../utils/auth";
 import {
   getSavedFigures,
   unsaveFigure,
@@ -66,7 +65,9 @@ const App = () => {
   // SYNERGY: Update a figure in all state locations
   const updateFigure = useCallback((figureId, updates) => {
     const matchesFigure = (f) => 
-      f._id === figureId || f.wikipediaId === figureId;
+      (figureId && (f._id === figureId || f.wikipediaId === figureId)) ||
+      (updates && updates.wikipediaId && (f.wikipediaId === updates.wikipediaId || f._id === updates.wikipediaId)) ||
+      (updates && updates._id && (f._id === updates._id || f.wikipediaId === updates._id));
     
     setAllFigures(prev => prev.map(f => 
       matchesFigure(f) ? { ...f, ...updates } : f
@@ -162,18 +163,52 @@ const App = () => {
         fetchSavedFigures();
 
         if (pendingSaveAction) {
-          handleSaveFigureClick(pendingSaveAction);
+          handleSaveFigureClick(pendingSaveAction, true);
           setPendingSaveAction(null);
         }
 
         if (pendingLikeAction) {
-          handleLikeFigureClick(pendingLikeAction);
+          handleLikeFigureClick(pendingLikeAction, true);
           setPendingLikeAction(null);
         }
       })
       .catch((err) => {
         console.log("Login error:", err);
         throw err; // Re-throw to let Login component handle the error state
+      })
+      .finally(() => setIsLoading(false));
+  };
+
+  const handleGoogleLoginClick = (token) => {
+    setIsLoading(true);
+    return googleLogin(token)
+      .then((data) => {
+        if (data.token) {
+          localStorage.setItem("token", data.token);
+          return checkToken(data.token);
+        }
+        throw new Error("No token received from Google Login");
+      })
+      .then((userData) => {
+        setLoggedIn(true);
+        setCurrentUser(userData);
+        closeModal();
+        navigate("/");
+        fetchSavedFigures();
+
+        if (pendingSaveAction) {
+          handleSaveFigureClick(pendingSaveAction, true);
+          setPendingSaveAction(null);
+        }
+
+        if (pendingLikeAction) {
+          handleLikeFigureClick(pendingLikeAction, true);
+          setPendingLikeAction(null);
+        }
+      })
+      .catch((err) => {
+        console.log("Google Login error:", err);
+        throw err;
       })
       .finally(() => setIsLoading(false));
   };
@@ -205,8 +240,9 @@ const App = () => {
     navigate("/");
   };
 
- const handleSaveFigureClick = (figure) => {
-  if (!loggedIn) {
+ const handleSaveFigureClick = (figure, isLoggedInOverride = null) => {
+  const isUserLoggedIn = isLoggedInOverride !== null ? isLoggedInOverride : loggedIn;
+  if (!isUserLoggedIn) {
     setPendingSaveAction(figure);
     openModal("login");
     return;
@@ -287,8 +323,9 @@ const App = () => {
   }
 };
 
-  const handleLikeFigureClick = async (figure) => {
-  if (!loggedIn) {
+  const handleLikeFigureClick = async (figure, isLoggedInOverride = null) => {
+  const isUserLoggedIn = isLoggedInOverride !== null ? isLoggedInOverride : loggedIn;
+  if (!isUserLoggedIn) {
     setPendingLikeAction(figure);
     openModal("login");
     return Promise.reject(new Error("User not logged in"));
@@ -331,6 +368,7 @@ const App = () => {
         likes: updatedFigure.likes,
         likedBy: updatedFigure.likedBy,
         _id: updatedFigure._id, // Ensure we have the DB id
+        wikipediaId: updatedFigure.wikipediaId || figure.wikipediaId,
       });
 
       // Return the updated figure for child components
@@ -416,18 +454,13 @@ const App = () => {
         </Suspense>
 
         <Login
-          isOpen={activeModal === "login"}
+          isOpen={activeModal === "login" || activeModal === "register"}
           onClose={closeModal}
           onLogin={handleLoginClick}
-          onRegisterClick={() => openModal("register")}
-          isLoading={isLoading}
-        />
-        <Register
-          isOpen={activeModal === "register"}
-          onClose={closeModal}
           onRegister={handleRegisterClick}
+          onGoogleLogin={handleGoogleLoginClick}
+          defaultActiveTab={activeModal === "register" ? "register" : "login"}
           isLoading={isLoading}
-          onLoginClick={() => openModal("login")}
         />
 
         {activeModal === "success" && (

@@ -1,16 +1,66 @@
 import ModalWithForm from "./ModalWithForm";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-function Login({ isOpen, onClose, onLogin, isLoading, onRegisterClick }) {
+function Login({ isOpen, onClose, onLogin, onRegister, onGoogleLogin, isLoading }) {
+  const [activeTab, setActiveTab] = useState("login"); // "login" or "register"
   const [error, setError] = useState("");
+
+  const handleGoogleLoginSuccess = (response) => {
+    setError("");
+    if (onGoogleLogin) {
+      onGoogleLogin(response.credential).catch((err) => {
+        const errorMessage = err.message || "Google authentication failed. Please try again.";
+        setError(errorMessage);
+        console.error("Google login error:", err);
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab("login");
+      setError("");
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && window.google) {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "1016847844002-yourgoogleclientid.apps.googleusercontent.com",
+          callback: handleGoogleLoginSuccess,
+        });
+        window.google.accounts.id.renderButton(
+          document.getElementById("google-signin-btn"),
+          { 
+            theme: "outline", 
+            size: "large", 
+            width: 384,
+            shape: "pill",
+            logo_alignment: "left"
+          }
+        );
+      } catch (err) {
+        console.error("Failed to initialize Google Sign-In:", err);
+      }
+    }
+  }, [isOpen]);
 
   const handleSubmit = (formValues) => {
     setError("");
-    onLogin(formValues).catch((err) => {
-      const errorMessage = err.message || "Invalid email or password. Please try again.";
-      setError(errorMessage);
-      console.error("Login error:", err);
-    });
+    if (activeTab === "login") {
+      onLogin(formValues).catch((err) => {
+        const errorMessage = err.message || "Invalid email or password. Please try again.";
+        setError(errorMessage);
+        console.error("Login error:", err);
+      });
+    } else {
+      onRegister(formValues).catch((err) => {
+        const errorMessage = err.message || "Registration failed. Please try again.";
+        setError(errorMessage);
+        console.error("Registration error:", err);
+      });
+    }
   };
 
   const handleClose = () => {
@@ -20,17 +70,49 @@ function Login({ isOpen, onClose, onLogin, isLoading, onRegisterClick }) {
 
   return (
     <ModalWithForm
-      name="login"
-      title="Sign In"
+      name="auth"
+      title="" // Empty title because we render tab selectors inside
       isOpen={isOpen}
       onClose={handleClose}
-      buttonText="Sign In"
+      buttonText={activeTab === "login" ? "Sign In" : "Sign Up"}
       onSubmit={handleSubmit}
       isLoading={isLoading}
       error={error}
     >
       {({ formValues, formErrors, handleInputChange }) => (
         <>
+          {/* MODERN: Tabs for Sign In vs Register */}
+          <div className="flex border-b border-gray-200 mb-6">
+            <button
+              type="button"
+              className={`flex-1 pb-3 text-lg font-bold border-b-2 transition-all duration-200 focus:outline-none ${
+                activeTab === "login"
+                  ? "border-secondary text-gray-900"
+                  : "border-transparent text-gray-400 hover:text-gray-600"
+              }`}
+              onClick={() => {
+                setActiveTab("login");
+                setError("");
+              }}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              className={`flex-1 pb-3 text-lg font-bold border-b-2 transition-all duration-200 focus:outline-none ${
+                activeTab === "register"
+                  ? "border-secondary text-gray-900"
+                  : "border-transparent text-gray-400 hover:text-gray-600"
+              }`}
+              onClick={() => {
+                setActiveTab("register");
+                setError("");
+              }}
+            >
+              Register
+            </button>
+          </div>
+
           {/* MODERN: Error Alert Banner */}
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 animate-shake">
@@ -48,6 +130,53 @@ function Login({ isOpen, onClose, onLogin, isLoading, onRegisterClick }) {
               <div className="flex-1">
                 <p className="text-sm font-medium text-red-800">{error}</p>
               </div>
+            </div>
+          )}
+
+          {/* MODERN: Username Input (only for register tab) */}
+          {activeTab === "register" && (
+            <div className="space-y-2 mb-4">
+              <label className="block text-sm font-semibold text-gray-700">
+                Username
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg
+                    className="h-5 w-5 text-gray-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  name="name"
+                  placeholder="Choose a username"
+                  value={formValues.name || ""}
+                  onChange={handleInputChange}
+                  required
+                  minLength="2"
+                  maxLength="30"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary transition-all duration-200 bg-white/50 backdrop-blur-sm hover:bg-white"
+                />
+              </div>
+              {formErrors.name && (
+                <p className="text-red-600 text-xs font-medium flex items-center gap-1 mt-1">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  {formErrors.name}
+                </p>
+              )}
             </div>
           )}
 
@@ -113,10 +242,11 @@ function Login({ isOpen, onClose, onLogin, isLoading, onRegisterClick }) {
               <input
                 type="password"
                 name="password"
-                placeholder="Enter your password"
+                placeholder={activeTab === "login" ? "Enter your password" : "Create a strong password"}
                 value={formValues.password || ""}
                 onChange={handleInputChange}
                 required
+                minLength="8"
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary transition-all duration-200 bg-white/50 backdrop-blur-sm hover:bg-white"
               />
             </div>
@@ -134,17 +264,53 @@ function Login({ isOpen, onClose, onLogin, isLoading, onRegisterClick }) {
             )}
           </div>
 
-          {/* MODERN: Sign Up Link */}
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center" aria-hidden="true">
+              <div className="w-full border-t border-gray-200"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-3 bg-white text-gray-500 font-medium">Or continue with</span>
+            </div>
+          </div>
+
+          {/* Google Button Container */}
+          <div className="flex justify-center w-full">
+            <div id="google-signin-btn" className="w-full max-w-[384px] flex justify-center"></div>
+          </div>
+
+          {/* MODERN: Toggle Link at Bottom */}
           <div className="mt-6 pt-6 border-t border-gray-200">
             <p className="text-center text-sm text-gray-600">
-              Not a member yet?{" "}
-              <button
-                type="button"
-                className="text-secondary hover:text-secondary/80 font-semibold focus:outline-none focus:underline transition-colors duration-200"
-                onClick={onRegisterClick}
-              >
-                Sign Up
-              </button>
+              {activeTab === "login" ? (
+                <>
+                  Not a member yet?{" "}
+                  <button
+                    type="button"
+                    className="text-secondary hover:text-secondary/80 font-semibold focus:outline-none focus:underline transition-colors duration-200"
+                    onClick={() => {
+                      setActiveTab("register");
+                      setError("");
+                    }}
+                  >
+                    Sign Up
+                  </button>
+                </>
+              ) : (
+                <>
+                  Already a member?{" "}
+                  <button
+                    type="button"
+                    className="text-secondary hover:text-secondary/80 font-semibold focus:outline-none focus:underline transition-colors duration-200"
+                    onClick={() => {
+                      setActiveTab("login");
+                      setError("");
+                    }}
+                  >
+                    Sign In
+                  </button>
+                </>
+              )}
             </p>
           </div>
         </>
