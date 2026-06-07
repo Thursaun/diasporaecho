@@ -3,9 +3,7 @@ import { getFigures } from '../../utils/api';
 import { fuzzySearchFilter } from '../../utils/fuzzySearch';
 import LazyFigureCard from './LazyFigureCard';
 
-// =============================================================================
-// HISTORICAL ERAS DEFINITIONS & STYLING
-// =============================================================================
+// Historical eras definitions & styling
 
 const determineClientEra = (years) => {
   if (!years || typeof years !== 'string') return "Unknown Era";
@@ -110,9 +108,7 @@ function Echoes({
   allFigures: propAllFigures = [],  // SYNERGY: Receive from App.jsx
   setAllFigures: propSetAllFigures  // SYNERGY: Receive from App.jsx
 }) {
-  // =============================================================================
-  // STATE MANAGEMENT: Use App.jsx state if available, else local state
-  // =============================================================================
+  // State management: Use App state or fallback to local state
 
   // SYNERGY: Use props if available, otherwise fall back to local state
   const [localFigures, setLocalFigures] = useState(() => {
@@ -141,9 +137,7 @@ function Echoes({
   const [searchQuery, setSearchQuery] = useState(""); // Filter figures by name
   const observerTarget = useRef(null);
 
-  // =============================================================================
-  // PERFORMANCE IMPROVEMENT: Optimized like handler with local state update
-  // =============================================================================
+  // Optimistic like handler with local state update
 
   const handleLikeClick = useCallback(async (figure) => {
     const figureId = figure._id || figure.wikipediaId;
@@ -201,9 +195,7 @@ function Echoes({
     }
   }, [onLikeFigureClick, setAllFigures]);
 
-  // =============================================================================
-  // PERFORMANCE IMPROVEMENT: Memoized Calculations
-  // =============================================================================
+  // Memoized calculations
   
   // PERFORMANCE: Memoize categorized figures to avoid recalculation on every render
   const categorizedFigures = useMemo(() => {
@@ -321,9 +313,7 @@ function Echoes({
     return "";
   }, [hoveredEra, activeEra]);
 
-  // =============================================================================
-  // PERFORMANCE IMPROVEMENT: Optimized Helper Functions
-  // =============================================================================
+  // Helper functions
   
   // PERFORMANCE: Memoize saved figure checking to avoid recalculation
   const isFigureSaved = useCallback((figure) => {
@@ -405,9 +395,7 @@ function Echoes({
     };
   }, [hasMoreFigures, loadingMore, loading, loadMoreFigures]);
 
-  // =============================================================================
-  // PERFORMANCE IMPROVEMENT: Optimized Data Fetching
-  // =============================================================================
+  // Data fetching
   
   useEffect(() => {
     console.log('🚀 Starting figure fetch...');
@@ -445,9 +433,7 @@ function Echoes({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // =============================================================================
-  // PERFORMANCE IMPROVEMENT: Optimized Rendering
-  // =============================================================================
+  // Render
 
   return (
     <div className="min-h-screen bg-gray-50">

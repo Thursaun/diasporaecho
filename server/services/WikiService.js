@@ -30,10 +30,7 @@ const withTimeout = (promise, ms) => {
   ]);
 };
 
-// =============================================================================
-// IMPROVED CATEGORIZATION: Use Wikidata occupation to assign categories
-// Priority order matters - first match wins (prioritizes primary professions)
-// =============================================================================
+// Improved categorization: Use Wikidata occupation to assign categories (first match wins)
 const CATEGORY_MAPPINGS = [
   // Athletes - very specific, high priority
   {

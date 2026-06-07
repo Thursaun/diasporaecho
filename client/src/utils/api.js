@@ -1,8 +1,6 @@
 import { BASE_URL } from "./constants";
 
-// =============================================================================
-// PERFORMANCE IMPROVEMENTS: Caching & Request Optimization
-// =============================================================================
+// Caching & request optimization
 
 // Simple in-memory cache for API responses
 // Reduces redundant network requests and improves loading times
@@ -99,9 +97,7 @@ const withPerfTracking = (label, fn) => {
   };
 };
 
-// =============================================================================
-// PERFORMANCE IMPROVEMENT: Cached Fetch Function with Request Deduplication
-// =============================================================================
+// Cached fetch function with request deduplication
 
 /**
  * Enhanced fetch function with caching, request deduplication and performance monitoring
@@ -184,9 +180,7 @@ const cachedFetch = async (url, options = {}, cacheType = 'REGULAR') => {
   return requestPromise;
 };
 
-// =============================================================================
-// PERFORMANCE IMPROVEMENT: Request Timeout & Retry Logic
-// =============================================================================
+// Request timeout & retry logic
 
 /**
  * Enhanced fetch with timeout and retry capabilities
@@ -224,9 +218,7 @@ const fetchWithTimeout = async (url, options = {}, timeout = 30000, retries = 2,
   }
 };
 
-// =============================================================================
-// UTILITY FUNCTIONS
-// =============================================================================
+// Utility functions
 
 /**
  * Get authentication headers with token
@@ -243,9 +235,7 @@ const getHeaders = () => {
 
 
 
-// =============================================================================
-// PERFORMANCE IMPROVEMENT: Optimized Figure API Functions
-// =============================================================================
+// Figure API functions
 
 /**
  * Get all figures with caching and performance optimization
@@ -596,9 +586,7 @@ const getFigureByWikipediaId = async (wikipediaId) => {
   }
 };
 
-// =============================================================================
-// USER INTERACTION API FUNCTIONS
-// =============================================================================
+// User interaction API functions
 
 /**
  * Like a figure (requires authentication)
@@ -788,9 +776,7 @@ const unsaveFigure = withPerfTracking('unsaveFigure', async (figureId) => {
   return data;
 });
 
-// =============================================================================
-// PERFORMANCE IMPROVEMENT: Category Matching Optimization
-// =============================================================================
+// Category matching optimization
 
 /**
  * Optimized category matching function
@@ -836,9 +822,7 @@ const matchToCategory = (figure) => {
   return "Scholars & Educators";
 };
 
-// =============================================================================
-// PERFORMANCE IMPROVEMENT: Cache Management Functions
-// =============================================================================
+// Cache management functions
 
 /**
  * Clear cache entries by URL pattern
@@ -910,9 +894,7 @@ const checkApiHealth = async () => {
   }
 };
 
-// =============================================================================
-// EXPORTS
-// =============================================================================
+// Exports
 
 export {
   // Core API functions

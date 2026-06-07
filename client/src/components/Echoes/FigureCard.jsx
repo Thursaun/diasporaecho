@@ -3,9 +3,7 @@ import { useNavigate } from "react-router-dom";
 import CurrentUserContext from "../../contexts/CurrentUserContext";
 import { getOptimizedImageUrl } from "../../utils/imageUtils";
 
-// =============================================================================
-// PERFORMANCE IMPROVEMENT: Memoized Component with custom comparison
-// =============================================================================
+// Memoized component for performance
 
 const determineClientEra = (years) => {
   if (!years || typeof years !== 'string') return "Unknown Era";
@@ -130,9 +128,7 @@ const FigureCard = memo(function FigureCard({
   badge = null, // New prop for external badges (e.g., Featured, Rank)
   hideInteractions = false, // Hide like/save buttons (for search results)
 }) {
-  // =============================================================================
-  // HOOKS & STATE: Optimized for performance
-  // =============================================================================
+  // Hooks and state
   
   const navigate = useNavigate();
   const currentUser = useContext(CurrentUserContext);
@@ -145,9 +141,7 @@ const FigureCard = memo(function FigureCard({
   // FLIP CARD STATE
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // =============================================================================
-  // DATA EXTRACTION: Optimized destructuring (with fallbacks for null figure)
-  // =============================================================================
+  // Data extraction with fallbacks
   
   const {
     _id = null,
@@ -175,13 +169,7 @@ const FigureCard = memo(function FigureCard({
   const displayEra = era || determineClientEra(years);
   const displayLegacy = legacy || getLegacyText(figure);
 
-  // =============================================================================
-  // PERFORMANCE IMPROVEMENT: Memoized Event Handlers
-  // =============================================================================
-
-  // =============================================================================
-  // PERFORMANCE IMPROVEMENT: Memoized Event Handlers
-  // =============================================================================
+  // Event handlers
   
 
 
@@ -248,33 +236,25 @@ const FigureCard = memo(function FigureCard({
     onLoginClick();
   }, [name, onLoginClick]);
 
-  // =============================================================================
-  // EARLY RETURN: After all hooks are defined
-  // =============================================================================
+  // Early return if figure is missing
   
   if (!figure) {
     console.warn('FigureCard received invalid figure data');
     return null;
   }
 
-  // =============================================================================
-  // HELPERS
-  // =============================================================================
+  // Helpers
 
 
 
-  // =============================================================================
-  // PERFORMANCE IMPROVEMENT: Optimized Data Processing
-  // =============================================================================
+  // Data processing
   
   // PERFORMANCE: Process years data only once
   const displayYears = years && years !== "Unknown" ? years : "Unknown Years";
   
 
 
-  // =============================================================================
-  // PERFORMANCE: Optimized Rendering
-  // =============================================================================
+  // Render
 
   return (
     <div

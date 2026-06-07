@@ -3,9 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getFeaturedFigures } from "../../utils/api";
 import { getOptimizedImageUrl } from "../../utils/imageUtils";
 
-// =============================================================================
-// PERFORMANCE: Optimized Image component with blur-up loading
-// =============================================================================
+// Optimized Image component with blur-up loading
 
 /**
  * PERFORMANCE: Optimized Image component with blur-up loading
@@ -67,9 +65,7 @@ const OptimizedImage = ({
   );
 };
 
-// =============================================================================
-// PERFORMANCE: Optimized FigureSlider Component
-// =============================================================================
+// Optimized FigureSlider Component
 
 function FigureSlider({ onSaveFigureClick, onLikeFigureClick }) {
   const navigate = useNavigate();
@@ -164,9 +160,7 @@ function FigureSlider({ onSaveFigureClick, onLikeFigureClick }) {
   // PERFORMANCE: Memoize current figure to prevent unnecessary recalculations
   const currentFigure = useMemo(() => figures[currentIndex], [figures, currentIndex]);
 
-  // =============================================================================
-  // RENDER: Loading State with Skeleton
-  // =============================================================================
+  // Render loading state with skeleton
   
   if (isLoading) {
     return (

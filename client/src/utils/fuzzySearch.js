@@ -1,7 +1,4 @@
-// =============================================================================
-// FUZZY SEARCH UTILITY
-// Implements Wikipedia-style search with partial matching and typo tolerance
-// =============================================================================
+// Fuzzy search utility with partial matching and typo tolerance
 
 /**
  * Calculate Levenshtein distance between two strings

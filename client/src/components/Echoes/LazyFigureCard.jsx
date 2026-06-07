@@ -2,9 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import FigureCard from './FigureCard';
 import { getOptimizedImageUrl, preloadImage } from '../../utils/imageUtils';
 
-// =============================================================================
-// PERFORMANCE OPTIMIZATION: Lazy Loading Wrapper for FigureCard
-// =============================================================================
+// Lazy loading wrapper for FigureCard
 
 /**
  * LazyFigureCard - Wrapper component that delays rendering of FigureCard
