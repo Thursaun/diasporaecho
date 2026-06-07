@@ -42,12 +42,51 @@ const yearsMap = {
   "Martin Luther King Jr.": "1929 - 1968"
 };
 
+const getFirstSentence = (text) => {
+  if (!text || typeof text !== 'string') return "";
+  
+  let pLevel = 0; // parentheses level ()
+  let bLevel = 0; // brackets level []
+  let sentenceEnd = -1;
+  
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (char === '(') pLevel++;
+    else if (char === ')') pLevel--;
+    else if (char === '[') bLevel++;
+    else if (char === ']') bLevel--;
+    else if (pLevel === 0 && bLevel === 0 && (char === '.' || char === '!' || char === '?')) {
+      const nextText = text.substring(i + 1);
+      const hasSpaceAndCapital = /^\s+([A-Z\d]|$)/.test(nextText) || nextText.trim() === "";
+      
+      const backwardText = text.substring(0, i);
+      const isAbbreviation = /\b(c|ca|dr|mr|mrs|ms|jr|sr|st|vs|al|gen|col|maj|capt|lieut|rev|prof|univ|est|dept)\s*$/i.test(backwardText) ||
+                             /\b[A-Z]\s*$/i.test(backwardText);
+      
+      if (hasSpaceAndCapital && !isAbbreviation) {
+        sentenceEnd = i;
+        break;
+      }
+    }
+  }
+  
+  let firstSentence = "";
+  if (sentenceEnd !== -1) {
+    firstSentence = text.substring(0, sentenceEnd + 1).trim();
+  } else {
+    firstSentence = text.trim();
+  }
+  
+  return firstSentence;
+};
+
 const determineEra = (years) => {
   if (!years || typeof years !== "string") return "Unknown Era";
   const match = years.match(/\b\d{4}\b/);
   if (!match) return "Unknown Era";
   
-  const year = parseInt(match[0], 10);
+  const birthYear = parseInt(match[0], 10);
+  const year = birthYear + 25; // Estimate era based on age of impact (approx. 25 years after birth)
   
   if (year < 1865) return "Slavery & Abolition Era";
   if (year >= 1865 && year <= 1877) return "Reconstruction Era";
@@ -70,32 +109,36 @@ async function run() {
 
     let updatedCount = 0;
     for (const fig of figures) {
-      const correctYears = yearsMap[fig.name];
-      if (correctYears) {
-        const correctEra = determineEra(correctYears);
-        
-        const update = {};
-        let needsUpdate = false;
+      const years = yearsMap[fig.name] || fig.years;
+      const correctEra = determineEra(years);
+      
+      const update = {};
+      let needsUpdate = false;
 
-        if (fig.years !== correctYears) {
-          update.years = correctYears;
+      if (years && fig.years !== years) {
+        update.years = years;
+        needsUpdate = true;
+      }
+
+      if (correctEra !== "Unknown Era" && fig.era !== correctEra) {
+        update.era = correctEra;
+        needsUpdate = true;
+      }
+
+      if (!fig.legacy) {
+        const cleanLegacy = getFirstSentence(fig.description);
+        if (cleanLegacy) {
+          update.legacy = cleanLegacy;
           needsUpdate = true;
         }
+      }
 
-        if (fig.era !== correctEra) {
-          update.era = correctEra;
-          needsUpdate = true;
-        }
-
-        if (needsUpdate) {
-          await Figure.updateOne({ _id: fig._id }, { $set: update });
-          console.log(`✏️ Updated "${fig.name}": Years = "${correctYears}", Era = "${correctEra}"`);
-          updatedCount++;
-        } else {
-          console.log(`ℹ️ "${fig.name}" already has correct years and era.`);
-        }
+      if (needsUpdate) {
+        await Figure.updateOne({ _id: fig._id }, { $set: update });
+        console.log(`✏️ Updated "${fig.name}": Years = "${years || fig.years}", Era = "${correctEra}", Legacy = "${update.legacy || fig.legacy || 'No Change'}"`);
+        updatedCount++;
       } else {
-        console.warn(`⚠️ Warning: No year mapping found for "${fig.name}"`);
+        console.log(`ℹ️ "${fig.name}" already has correct years, era, and legacy.`);
       }
     }
 

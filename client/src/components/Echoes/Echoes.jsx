@@ -9,7 +9,9 @@ const determineClientEra = (years) => {
   if (!years || typeof years !== 'string') return "Unknown Era";
   const match = years.match(/\b\d{4}\b/);
   if (!match) return "Unknown Era";
-  const year = parseInt(match[0], 10);
+  
+  const birthYear = parseInt(match[0], 10);
+  const year = birthYear + 25; // Estimate era based on age of impact (approx. 25 years after birth)
   
   if (year < 1865) return "Slavery & Abolition Era";
   if (year >= 1865 && year <= 1877) return "Reconstruction Era";

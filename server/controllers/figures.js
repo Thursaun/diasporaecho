@@ -6,6 +6,44 @@ const FeaturedFiguresService = require("../services/featuredFiguresService");
 const { cacheService, CACHE_TTL } = require("../services/cacheService");
 const { extractYearsFromExtract } = require("../helper/yearExtractor");
 
+const getFirstSentence = (text) => {
+  if (!text || typeof text !== 'string') return "";
+  
+  let pLevel = 0; // parentheses level ()
+  let bLevel = 0; // brackets level []
+  let sentenceEnd = -1;
+  
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (char === '(') pLevel++;
+    else if (char === ')') pLevel--;
+    else if (char === '[') bLevel++;
+    else if (char === ']') bLevel--;
+    else if (pLevel === 0 && bLevel === 0 && (char === '.' || char === '!' || char === '?')) {
+      const nextText = text.substring(i + 1);
+      const hasSpaceAndCapital = /^\s+([A-Z\d]|$)/.test(nextText) || nextText.trim() === "";
+      
+      const backwardText = text.substring(0, i);
+      const isAbbreviation = /\b(c|ca|dr|mr|mrs|ms|jr|sr|st|vs|al|gen|col|maj|capt|lieut|rev|prof|univ|est|dept)\s*$/i.test(backwardText) ||
+                             /\b[A-Z]\s*$/i.test(backwardText);
+      
+      if (hasSpaceAndCapital && !isAbbreviation) {
+        sentenceEnd = i;
+        break;
+      }
+    }
+  }
+  
+  let firstSentence = "";
+  if (sentenceEnd !== -1) {
+    firstSentence = text.substring(0, sentenceEnd + 1).trim();
+  } else {
+    firstSentence = text.trim();
+  }
+  
+  return firstSentence;
+};
+
 /**
  * Programmatically infer historical era based on active years
  */
@@ -16,7 +54,8 @@ const determineEra = (years) => {
   const match = years.match(/\b\d{4}\b/);
   if (!match) return "Unknown Era";
   
-  const year = parseInt(match[0], 10);
+  const birthYear = parseInt(match[0], 10);
+  const year = birthYear + 25; // Estimate era based on age of impact (approx. 25 years after birth)
   
   if (year < 1865) {
     return "Slavery & Abolition Era";
@@ -46,9 +85,8 @@ const extractLegacy = (figure) => {
   
   if (figure.description) {
     // Take the first sentence of the description
-    const sentences = figure.description.split(/(?<=[.!?])\s+/);
-    if (sentences.length > 0) {
-      const firstSentence = sentences[0].trim();
+    const firstSentence = getFirstSentence(figure.description);
+    if (firstSentence) {
       // If it's too long, truncate it
       if (firstSentence.length > 200) {
         return firstSentence.substring(0, 197) + "...";

@@ -6,11 +6,51 @@ import CurrentUserContext from "../../contexts/CurrentUserContext";
 // PERFORMANCE: Simple client-side cache for figure data
 const figureCache = new Map();
 
+const getFirstSentence = (text) => {
+  if (!text || typeof text !== 'string') return "";
+  
+  let pLevel = 0; // parentheses level ()
+  let bLevel = 0; // brackets level []
+  let sentenceEnd = -1;
+  
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (char === '(') pLevel++;
+    else if (char === ')') pLevel--;
+    else if (char === '[') bLevel++;
+    else if (char === ']') bLevel--;
+    else if (pLevel === 0 && bLevel === 0 && (char === '.' || char === '!' || char === '?')) {
+      const nextText = text.substring(i + 1);
+      const hasSpaceAndCapital = /^\s+([A-Z\d]|$)/.test(nextText) || nextText.trim() === "";
+      
+      const backwardText = text.substring(0, i);
+      const isAbbreviation = /\b(c|ca|dr|mr|mrs|ms|jr|sr|st|vs|al|gen|col|maj|capt|lieut|rev|prof|univ|est|dept)\s*$/i.test(backwardText) ||
+                             /\b[A-Z]\s*$/i.test(backwardText);
+      
+      if (hasSpaceAndCapital && !isAbbreviation) {
+        sentenceEnd = i;
+        break;
+      }
+    }
+  }
+  
+  let firstSentence = "";
+  if (sentenceEnd !== -1) {
+    firstSentence = text.substring(0, sentenceEnd + 1).trim();
+  } else {
+    firstSentence = text.trim();
+  }
+  
+  return firstSentence;
+};
+
 const determineClientEra = (years) => {
   if (!years || typeof years !== 'string') return "Unknown Era";
   const match = years.match(/\b\d{4}\b/);
   if (!match) return "Unknown Era";
-  const year = parseInt(match[0], 10);
+  
+  const birthYear = parseInt(match[0], 10);
+  const year = birthYear + 25; // Estimate era based on age of impact (approx. 25 years after birth)
   
   if (year < 1865) return "Slavery & Abolition Era";
   if (year >= 1865 && year <= 1877) return "Reconstruction Era";
@@ -19,8 +59,6 @@ const determineClientEra = (years) => {
   if (year > 1940 && year <= 1968) return "Civil Rights Movement";
   return "Post-Civil Rights & Modern Era";
 };
-
-
 
 const eraDescriptions = {
   "Slavery & Abolition Era": "The period marked by the struggle against chattel slavery, the Underground Railroad, and the rise of early abolitionist leaders.",
@@ -36,51 +74,8 @@ const getLegacyText = (figure) => {
   if (figure.legacy) return figure.legacy;
   if (figure.contributions && figure.contributions.length > 0) return figure.contributions[0];
   if (figure.description) {
-    const sentences = figure.description
-      .split(/(?<=[.!?])\s+/)
-      .map(s => s.trim())
-      .filter(s => s.length > 20);
-
-    const keywords = [
-      "known for", 
-      "famous for", 
-      "best known", 
-      "pioneered", 
-      "founded", 
-      "established", 
-      "championed", 
-      "advocated", 
-      "fought for", 
-      "credited with", 
-      "remembered for",
-      "instrumental in",
-      "key figure",
-      "leader in",
-      "became the first",
-      "noted for",
-      "renowned for",
-      "acclaimed",
-      "celebrated",
-      "popularized",
-      "escaped",
-      "spokesman",
-      "spokesperson"
-    ];
-
-    // Find the first sentence that contains one of the keywords
-    const matchingSentence = sentences.find(s => {
-      const lower = s.toLowerCase();
-      return keywords.some(kw => lower.includes(kw));
-    });
-
-    if (matchingSentence) {
-      return matchingSentence.length > 200 
-        ? matchingSentence.substring(0, 197) + "..." 
-        : matchingSentence;
-    }
-
-    if (sentences.length > 0) {
-      const firstSentence = sentences[0];
+    const firstSentence = getFirstSentence(figure.description);
+    if (firstSentence) {
       return firstSentence.length > 200 
         ? firstSentence.substring(0, 197) + "..." 
         : firstSentence;
