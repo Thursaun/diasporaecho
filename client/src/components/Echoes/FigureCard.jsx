@@ -492,18 +492,19 @@ const FigureCard = memo(function FigureCard({
                 // If we have at least 2 structured items, render them as a sleek list!
                 if (items.length >= 2) {
                   return (
-                    <div className="flex flex-col gap-1.5 w-full text-left">
+                    <div className="flex flex-col w-full text-left">
                       {items.map((item, i) => (
-                        <div key={i} className="bg-white/5 border border-white/10 rounded-lg py-1.5 px-3 flex items-center justify-between gap-3 backdrop-blur-sm hover:bg-white/10 transition-colors">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-sm leading-none flex-shrink-0">{item.icon}</span>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">{item.label}</span>
+                        <div key={i} className="border-t border-white/10 py-2 flex flex-col gap-0.5 hover:bg-white/5 transition-colors px-2">
+                          <div className="flex items-center gap-1.5 text-gray-400">
+                            <span className="text-xs leading-none flex-shrink-0">{item.icon}</span>
+                            <span className="text-[9px] font-bold uppercase tracking-wider">{item.label}</span>
                           </div>
-                          <span className="text-[11px] sm:text-xs font-semibold text-white truncate text-right max-w-[65%]" title={item.val}>
+                          <p className="text-[11px] sm:text-xs font-semibold text-white leading-normal pl-5 break-words">
                             {item.val}
-                          </span>
+                          </p>
                         </div>
                       ))}
+                      <div className="border-t border-white/10 w-full"></div>
                     </div>
                   );
                 }
@@ -528,13 +529,19 @@ const FigureCard = memo(function FigureCard({
                     ];
 
                 return (
-                  <div className="flex flex-col gap-2 w-full text-left">
+                  <div className="flex flex-col w-full text-left">
                     {displayItems.map((text, i) => (
-                      <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-2.5 flex items-start gap-2.5 backdrop-blur-sm hover:bg-white/10 transition-colors">
-                        <span className="text-amber-400 text-xs mt-0.5">★</span>
-                        <p className="text-[10px] sm:text-xs text-gray-200 leading-normal font-medium mb-0">{text}</p>
+                      <div key={i} className="border-t border-white/10 py-2 flex flex-col gap-0.5 hover:bg-white/5 transition-colors px-2">
+                        <div className="flex items-center gap-1.5 text-amber-400">
+                          <span className="text-xs leading-none flex-shrink-0">★</span>
+                          <span className="text-[9px] font-bold uppercase tracking-wider">Highlight</span>
+                        </div>
+                        <p className="text-[11px] sm:text-xs font-semibold text-white leading-normal pl-5 break-words">
+                          {text}
+                        </p>
                       </div>
                     ))}
+                    <div className="border-t border-white/10 w-full"></div>
                   </div>
                 );
               })()}
